@@ -1,0 +1,29 @@
+
+(macro (aif form)
+  `(let ((it ,(cadr form)))
+     (if it
+         ,(caddr form)
+         ,(if (pair? (cdddr form))
+              (cadddr form)
+              #f))))
+
+(define identity (lambda (x) x))
+
+(define ignore (lambda _ #f))
+
+(define compose
+  (lambda (f . fs)
+    (cond ((null? fs)
+           f)
+          ((null? (cdr fs))
+           (lambda x
+             (f (apply (car fs) x))))
+          (else
+           (compose (compose f (car fs))
+                    (cdr fs))))))
+
+(define nth
+  (lambda (n lst)
+    ;; I miss nil = false semantics...
+    (and (<= n (pred (length lst)))
+         (list-ref lst n))))
