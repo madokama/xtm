@@ -29,6 +29,20 @@
 
 
 
+;;; Plugin System
+
+(define lily-command-alist '())
+
+(define lily-command-handler
+  (lambda (cmd)
+    (cl:some (lambda (plugin)
+               (and (memq cmd (cdr plugin))
+                    ;; symbol->function
+                    (eval (car plugin))))
+             lily-command-alist)))
+
+
+
 ;;; Musical structs
 
 (defstruct lily-note
@@ -47,10 +61,18 @@
 (defstruct lily-rest
   dur)
 
+(defstruct lily-phrase
+  dur notes)
+
+(defstruct lily-cmd
+  dur cmd)
+
 (define lily-music?
   (lambda (mexp)
     (or (lily-note? mexp)
-        (lily-rest? mexp))))
+        (lily-phrase? mexp)
+        (lily-rest? mexp)
+        (lily-cmd? mexp))))
 
 (define lily-default-note (make-lily-note 'pn 48 'dur 1 'vol 100))
 
@@ -123,6 +145,25 @@
                             'dur (aif (nth 3 parts) (lily-parse-dur it))
                             'raw (car result)))))))
 
+(define lily-parse-phrase
+  (lambda (base mexp)
+    (let loop ((prev base) (mexp mexp) (parsed '()))
+      (if (null? mexp)
+          (make-lily-phrase 'dur (foldl (lambda (acc note)
+                                          (+ acc (lily-duration note)))
+                                        0
+                                        parsed)
+                            'notes (reverse parsed))
+          (let ((note (lily-parse-mexp prev (car mexp))))
+            (cond
+             ((procedure? note)
+              (let ((result (note (car mexp) prev (cdr mexp))))
+                (loop (cadr result)
+                      (caddr result)
+                      (cons (car result) parsed))))
+             (note
+              (loop note (cdr mexp) (cons note parsed)))))))))
+
 (define lily-parse-rest
   (lambda (str)
     (let ((result (regex:matched str lily-regex-rest)))
@@ -132,11 +173,13 @@
 
 (define lily-parse-mexp
   (lambda (prev mexp)
-    (cond ((symbol? mexp)
+    (cond ((lily-music? mexp) mexp)
+          ((lily-command-handler mexp) => identity)
+          ((symbol? mexp)
            (let ((note (symbol->string mexp)))
-             (or (lily-parse-note note)
-                 (lily-parse-rest note))))
-          ((lily-music? mexp) mexp))))
+             (aif (or (lily-parse-note note)
+                      (lily-parse-rest note))
+                  (lily-rel-pitch prev it)))))))
 
 (define lily-calc-pitch
   (lambda (pn note)
@@ -160,7 +203,9 @@
 (define lily-duration
   (lambda (note)
     (cond ((lily-note? note) (lily-note.dur note))
-          ((lily-rest? note) (lily-rest.dur note)))))
+          ((lily-phrase? note) (lily-phrase.dur note))
+          ((lily-rest? note) (lily-rest.dur note))
+          ((lily-cmd? note) (lily-cmd.dur note)))))
 
 (define lily-suppl-note
   (lambda (ref note)
@@ -189,19 +234,24 @@
     (letrec ((parse
               (lambda (prev mexp)
                 (if (pair? mexp)
-                    (let ((note
-                           (lily-rel-pitch prev
-                                           (lily-parse-mexp prev (car mexp)))))
-                      (lambda (k)
-                        (k note
-                           (parse
-                            ;; Carry over the last note for `lily-rel-pitch' to work.
-                            (if (lily-note? note) note prev)
-                            (cdr mexp)))))
+                    (let ((note (lily-parse-mexp prev (car mexp))))
+                      (cond
+                       ((procedure? note)
+                        (lambda (k)
+                          (let ((result (note (car mexp) prev (cdr mexp))))
+                            (k (car result)
+                               (apply parse (cdr result))))))
+                       (note
+                        (lambda (k)
+                          (k note
+                             (parse
+                              ;; Carry over the last note for `lily-rel-pitch' to work.
+                              (if (lily-note? note) note prev)
+                              (cdr mexp)))))))
                     ignore))))
       (parse (if (lily-note? base)
                  base
-                 (lily-rel-pitch lily-default-note (lily-parse-mexp () base)))
+                 (lily-parse-mexp lily-default-note base))
              mexp))))
 
 (define lily-play-music
@@ -209,10 +259,15 @@
     (music
      (lambda (note next)
        (let ((dur (lily-duration note)))
-         (when (lily-note? note)
-           (play-note (*metro* beat) inst
-                      (lily-note.pitch note)
-                      (lily-note.vol note)
-                      (*metro* 'dur (* dur 1.02)))) ; XXX legato hack
+         (cond ((lily-phrase? note)
+                (lily-play-music beat inst
+                                 (lily-parse-music () (lily-phrase.notes note))))
+               ;; ((lily-cmd? note)
+               ;;  ((lily-cmd.cmd note) beat inst))
+               ((lily-note? note)
+                (play-note (*metro* beat) inst
+                           (lily-note.pitch note)
+                           (lily-note.vol note)
+                           (*metro* 'dur (* dur 1.02))))) ; XXX legato hack
          (callback (*metro* (+ beat (* 0.5 dur)))
                    'lily-play-music (+ beat dur) inst next))))))
