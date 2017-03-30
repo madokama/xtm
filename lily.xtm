@@ -61,7 +61,7 @@
 (define lily-parse-numeric
   (lambda (map regex)
     (lambda (str)
-      (foldr (lambda (x n)
+      (foldl (lambda (n x)
                (+ (cdr (assoc x map)) n))
              0
              (regex:match-all str regex)))))
@@ -84,7 +84,7 @@
 (define lily-analyze-dur-dot
   (lambda (dot)
     (lambda (dur)
-      (foldr (lambda (n acc)
+      (foldl (lambda (acc n)
                (+ (* dur (expt 2 (- (succ n))))
                   acc))
              dur
