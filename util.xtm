@@ -12,15 +12,11 @@
 (define ignore (lambda _ #f))
 
 (define compose
-  (lambda (f . fs)
-    (cond ((null? fs)
-           f)
-          ((null? (cdr fs))
-           (lambda x
-             (f (apply (car fs) x))))
-          (else
-           (compose (compose f (car fs))
-                    (cdr fs))))))
+  (lambda fs
+    (cl:reduce (lambda (f g)
+                 (lambda (x)
+                   (f (g x))))
+               fs)))
 
 (define nth
   (lambda (n lst)
