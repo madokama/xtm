@@ -27,3 +27,24 @@
     ;; I miss nil = false semantics...
     (and (<= n (pred (length lst)))
          (list-ref lst n))))
+
+(macro seq-let
+  (lambda (form)
+    (apply (lambda (seq-let vars seq . body)
+             (let ((seq-var (gensym)))
+               `(let (,@(map (lambda (v)
+                              (list v #f))
+                            vars)
+                      (,seq-var ,seq))
+                  (if (null? ,seq-var)
+                      #f
+                      (begin
+                        ,@(let loop ((i 0) (vars vars) (form '()))
+                           (if (null? vars)
+                               form
+                               (loop (+ i 1)
+                                     (cdr vars)
+                                     (cons `(set! ,(car vars) (nth ,i ,seq-var))
+                                           form))))
+                        ,@body)))))
+           form)))

@@ -135,15 +135,12 @@
 
 (define lily-parse-note
   (lambda (str)
-    (let ((result (regex:matched str lily-regex-note)))
-      (if (null? result)
-          #f
-          (let ((parts (cdr result)))
-            (make-lily-note 'pc (cdr (assoc (car parts) lily-map-pc))
-                            'acc (aif (nth 1 parts) (lily-parse-acc it) 0)
-                            'os (aif (nth 2 parts) (lily-parse-os it) 0)
-                            'dur (aif (nth 3 parts) (lily-parse-dur it))
-                            'raw (car result)))))))
+    (seq-let (raw pc acc os dur) (regex:matched str lily-regex-note)
+      (make-lily-note 'pc (cdr (assoc pc lily-map-pc))
+                      'acc (if acc (lily-parse-acc acc) 0)
+                      'os (if os (lily-parse-os os) 0)
+                      'dur (if dur (lily-parse-dur dur) #f)
+                      'raw raw))))
 
 (define lily-parse-phrase
   (lambda (base mexp)
@@ -157,10 +154,9 @@
           (let ((note (lily-parse-mexp prev (car mexp))))
             (cond
              ((procedure? note)
-              (let ((result (note (car mexp) prev (cdr mexp))))
-                (loop (cadr result)
-                      (caddr result)
-                      (cons (car result) parsed))))
+              (seq-let (note~ next-prev next-mexp)
+                  (note (car mexp) prev (cdr mexp))
+                (loop next-prev next-mexp (cons note~ parsed))))
              (note
               (loop note (cdr mexp) (cons note parsed)))))))))
 
