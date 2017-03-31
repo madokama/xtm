@@ -258,8 +258,8 @@
          (cond ((lily-phrase? note)
                 (lily-play-music beat inst
                                  (lily-parse-music () (lily-phrase.notes note))))
-               ;; ((lily-cmd? note)
-               ;;  ((lily-cmd.cmd note) beat inst))
+               ((lily-cmd? note)
+                ((lily-cmd.cmd note)))
                ((lily-note? note)
                 (play-note (*metro* beat) inst
                            (lily-note.pitch note)
