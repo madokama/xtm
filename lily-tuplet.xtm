@@ -1,5 +1,6 @@
-;; Example:
+;; Examples:
 ;; \\tuplet 3/2 (c8 d e)
+;; \\tuplet 3/2 (c4 d \\tuplet 3/2 (e8 f g)) ; nested tuplet (not quite tested)
 
 (set! lily-command-alist (cons '(lily-parse-tuplet \\tuplet) lily-command-alist))
 
@@ -9,7 +10,9 @@
                 (cond ((lily-note? note)
                        (set!lily-note.dur note (* (lily-note.dur note) frac)))
                       ((lily-rest? note)
-                       (set!lily-rest.dur note (* (lily-rest.dur note) frac)))))
+                       (set!lily-rest.dur note (* (lily-rest.dur note) frac)))
+                      ((lily-phrase? note)
+                       (lily-tuplet-apply-ratio frac note))))
               (lily-phrase.notes tuplet))
     (set!lily-phrase.dur tuplet (* (lily-phrase.dur tuplet) frac))))
 
