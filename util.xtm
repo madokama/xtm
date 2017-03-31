@@ -14,8 +14,8 @@
 (define compose
   (lambda fs
     (cl:reduce (lambda (f g)
-                 (lambda (x)
-                   (f (g x))))
+                 (lambda x
+                   (f (apply g x))))
                fs)))
 
 (define nth
