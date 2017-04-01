@@ -143,22 +143,18 @@
                       'raw raw))))
 
 (define lily-parse-phrase
+  ;; Parse given musical expressions all at once, to e.g., obtain the
+  ;; entire duration.
   (lambda (base mexp)
-    (let loop ((prev base) (mexp mexp) (parsed '()))
-      (if (null? mexp)
-          (make-lily-phrase 'dur (foldl (lambda (acc note)
-                                          (+ acc (lily-duration note)))
-                                        0
-                                        parsed)
-                            'notes (reverse parsed))
-          (let ((note (lily-parse-mexp prev (car mexp))))
-            (cond
-             ((procedure? note)
-              (seq-let (note~ next-prev next-mexp)
-                  (note (car mexp) prev (cdr mexp))
-                (loop next-prev next-mexp (cons note~ parsed))))
-             (note
-              (loop note (cdr mexp) (cons note parsed)))))))))
+    (letrec ((accum
+              (lambda (note next)
+                (cons note (next accum)))))
+      (let ((phrase ((lily-parse-music base mexp) accum)))
+        (make-lily-phrase 'dur (foldl (lambda (acc note)
+                                        (+ acc (lily-duration note)))
+                                      0
+                                      phrase)
+                          'notes phrase)))))
 
 (define lily-parse-rest
   (lambda (str)
@@ -244,7 +240,7 @@
                               ;; Carry over the last note for `lily-rel-pitch' to work.
                               (if (lily-note? note) note prev)
                               (cdr mexp)))))))
-                    ignore))))
+                    (lambda (_) '())))))
       (parse (if (lily-note? base)
                  base
                  (lily-parse-mexp lily-default-note base))
