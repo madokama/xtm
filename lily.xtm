@@ -68,11 +68,7 @@
   dur cmd)
 
 (define lily-music?
-  (lambda (mexp)
-    (or (lily-note? mexp)
-        (lily-phrase? mexp)
-        (lily-rest? mexp)
-        (lily-cmd? mexp))))
+  (orf lily-note? lily-phrase? lily-rest? lily-cmd?))
 
 (define lily-default-note (make-lily-note 'pn 48 'dur 1 'vol 100))
 
@@ -240,7 +236,7 @@
                               ;; Carry over the last note for `lily-rel-pitch' to work.
                               (if (lily-note? note) note prev)
                               (cdr mexp)))))))
-                    (lambda (_) '())))))
+                    (constantly '())))))
       (parse (if (lily-note? base)
                  base
                  (lily-parse-mexp lily-default-note base))

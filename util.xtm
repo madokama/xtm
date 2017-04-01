@@ -9,7 +9,11 @@
 
 (define identity (lambda (x) x))
 
-(define ignore (lambda _ #f))
+(define constantly
+  (lambda (x)
+    (lambda _ x)))
+
+(define ignore (constantly #f))
 
 (define compose
   (lambda fs
@@ -17,6 +21,13 @@
                  (lambda x
                    (f (apply g x))))
                fs)))
+
+(define orf
+  (lambda fs
+    (lambda x
+      (cl:some (lambda (f)
+                 (apply f x))
+               fs))))
 
 (define nth
   (lambda (n lst)
