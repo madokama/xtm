@@ -14,7 +14,8 @@
                       ((lily-phrase? note)
                        (lily-tuplet-apply-ratio frac note))))
               (lily-phrase.notes tuplet))
-    (set!lily-phrase.dur tuplet (* (lily-phrase.dur tuplet) frac))))
+    (set!lily-phrase.dur tuplet (* (lily-phrase.dur tuplet) frac))
+    tuplet))
 
 (define lily-parse-tuplet
   (lambda (cmd prev mexp)
