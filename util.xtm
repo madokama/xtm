@@ -43,7 +43,7 @@
                               (list v #f))
                             vars)
                       (,seq-var ,seq))
-                  (if (null? ,seq-var)
+                  (if (or (null? ,seq-var) (not ,seq-var))
                       #f
                       (begin
                         ,@(let loop ((i 0) (vars vars) (form '()))
