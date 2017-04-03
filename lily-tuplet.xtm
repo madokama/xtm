@@ -5,16 +5,13 @@
 (set! lily-command-alist (cons '(lily-parse-tuplet \\tuplet) lily-command-alist))
 
 (define lily-tuplet-apply-ratio
-  (lambda (frac tuplet)
+  (lambda (ratio tuplet)
     (for-each (lambda (note)
-                (cond ((lily-note? note)
-                       (set!lily-note.dur note (* (lily-note.dur note) frac)))
-                      ((lily-rest? note)
-                       (set!lily-rest.dur note (* (lily-rest.dur note) frac)))
-                      ((lily-phrase? note)
-                       (lily-tuplet-apply-ratio frac note))))
+                (if (lily-phrase? note)
+                    (lily-tuplet-apply-ratio ratio note)
+                    (lily-duration! note (* (lily-duration note) ratio))))
               (lily-phrase.notes tuplet))
-    (set!lily-phrase.dur tuplet (* (lily-phrase.dur tuplet) frac))
+    (lily-duration! tuplet (* (lily-duration tuplet) ratio))
     tuplet))
 
 (define lily-parse-tuplet

@@ -45,7 +45,36 @@
 
 ;;; Musical structs
 
-(defstruct lily-note
+(define lily-music-types '())
+
+(macro lily-deftype
+  (lambda (form)
+    (apply (lambda (lily-deftype type . fields)
+             `(begin
+                (defstruct ,type ,@fields)
+                (set! lily-music-types (cons ',type lily-music-types))
+                ,@(map (lambda (field)
+                        (let ((f (symbol->string (if (pair? field)
+                                                     (car field)
+                                                     field))))
+                          `(begin
+                             ;; Install get/set operators on TYPE into
+                             ;; the music-type system.
+                             (put ',(string->symbol f)
+                                  ',type
+                                  (string->symbol
+                                   (string-append (symbol->string ',type)
+                                                  "." ,f)))
+                             (put ',(string->symbol (string-append f "!"))
+                                  ',type
+                                  (string->symbol
+                                   (string-append "set!"
+                                                  (symbol->string ',type)
+                                                  "." ,f))))))
+                      fields)))
+           form)))
+
+(lily-deftype lily-note
   (pc 0)                                ; pitch class
   (acc 0)                               ; accidental
   (os 0)                                ; octave shift
@@ -55,22 +84,64 @@
   (vol #f)
   ;; TODO
   ;; - offset (for arpeggio, glissando, triplet etc.)
-  ;; - notes (for chord)
   raw)
 
-(defstruct lily-rest
+(lily-deftype lily-rest
   dur)
 
-(defstruct lily-phrase
+(lily-deftype lily-phrase
   dur notes)
 
-(defstruct lily-cmd
+(lily-deftype lily-chord
+  dur notes)
+
+(lily-deftype lily-cmd
   dur cmd)
 
+(define lily-typetag
+  (lambda (ly)
+    (and (vector? ly) (vector-ref ly 0))))
+
 (define lily-music?
-  (orf lily-note? lily-phrase? lily-rest? lily-cmd?))
+  (lambda (ly)
+    (aif (lily-typetag ly)
+         (memq it lily-music-types))))
 
 (define lily-default-note (make-lily-note 'pn 48 'dur 1 'vol 100))
+
+;; Generic operators
+
+;; Data-directed strategy as described in (info "(sicp) 2-4-3")
+(define lily-generic
+  (lambda (op)
+    (lambda (ly . args)
+      (let ((proc (get op (lily-typetag ly))))
+        (and (not (null? proc))
+             (apply (eval proc) ly args))))))
+
+(define lily-duration (lily-generic 'dur))
+(define lily-duration! (lily-generic 'dur!))
+(define lily-volume (lily-generic 'vol))
+(define lily-volume! (lily-generic 'vol!))
+
+;; Some ad-hoc operators
+
+(put 'dur! 'lily-chord
+     (lambda (chord dur)
+       (for-each (lambda (note)
+                   (lily-duration! note dur))
+                 (lily-chord.notes chord))
+       (set!lily-chord.dur chord dur)))
+
+(put 'vol 'lily-chord
+     (lambda (chord)
+       (lily-note.vol (car (lily-chord.notes chord)))))
+
+(put 'vol! 'lily-chord
+     (lambda (chord vol)
+       (for-each (lambda (note)
+                   (lily-volume! note vol))
+                 (lily-chord.notes chord))))
 
 
 
@@ -188,29 +259,12 @@
         (set!lily-note.pitch note (+ pitch (lily-note.acc note)))))
     (lily-supplement ref note)))
 
-(define lily-duration
-  (lambda (note)
-    (cond ((lily-note? note) (lily-note.dur note))
-          ((lily-phrase? note) (lily-phrase.dur note))
-          ((lily-rest? note) (lily-rest.dur note))
-          ((lily-cmd? note) (lily-cmd.dur note)))))
-
-(define lily-suppl-note
-  (lambda (ref note)
-    (unless (lily-note.dur note)
-      (set!lily-note.dur note (lily-note.dur ref)))
-    (unless (lily-note.vol note)
-      (set!lily-note.vol note (lily-note.vol ref)))))
-
-(define lily-suppl-rest
-  (lambda (ref rest)
-    (unless (lily-rest.dur rest)
-      (set!lily-rest.dur rest (lily-duration ref)))))
-
 (define lily-supplement
   (lambda (ref note)
-    (cond ((lily-note? note) (lily-suppl-note ref note))
-          ((lily-rest? note) (lily-suppl-rest ref note)))
+    (unless (lily-duration note)
+      (lily-duration! note (lily-duration ref)))
+    (unless (lily-volume note)
+      (lily-volume! note (lily-volume ref)))
     note))
 
 
