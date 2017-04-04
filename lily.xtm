@@ -339,6 +339,6 @@
                 (play-note (*metro* beat) inst
                            (lily-note.pitch note)
                            (lily-note.vol note)
-                           (*metro* 'dur (* dur 1.02))))) ; XXX legato hack
+                           (*metro* 'dur dur))))
          (callback (*metro* (+ beat (* 0.5 dur)))
                    'lily-play-music (+ beat dur) inst next))))))
