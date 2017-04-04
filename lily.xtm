@@ -303,9 +303,9 @@
                     (cond
                      ((procedure? note)
                       (lambda (k)
-                        (let ((result (note (car mexp) prev (cdr mexp))))
-                          (k (car result)
-                             (apply parse (cdr result))))))
+                        (note (car mexp) prev (cdr mexp)
+                              (lambda (note last mexp)
+                                (k note (parse last mexp))))))
                      (note
                       (lambda (k)
                         (k note

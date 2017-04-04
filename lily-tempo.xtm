@@ -18,16 +18,16 @@
 
 (define lily-parse-tempo
   ;; NOTE dotted duration notation works just by accident.
-  (lambda (cmd prev mexp)
+  (lambda (cmd prev mexp k)
     (case cmd
       ((\\tempo)
        (seq-let (unit _ bpm) mexp
-         (list (lily-tempo-setter
-                (* (lily-parse-dur (number->string unit))
-                   bpm))
-               prev
-               (cdddr mexp))))
+         (k (lily-tempo-setter
+             (* (lily-parse-dur (number->string unit))
+                bpm))
+            prev
+            (cdddr mexp))))
       ((\\bpm)
-       (list (lily-tempo-setter (car mexp))
-             prev
-             (cdr mexp))))))
+       (k (lily-tempo-setter (car mexp))
+          prev
+          (cdr mexp))))))

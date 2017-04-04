@@ -32,12 +32,12 @@
                  (lily-parse-dur attr))))))
 
 (define lily-parse-chord
-  (lambda (cmd prev mexp)
+  (lambda (cmd prev mexp k)
     (if (lily-chord-repeat? cmd)
         (let ((chord (lily-copy prev)))
           (aif (lily-parse-dur (substring (symbol->string cmd) 1))
                (lily-duration! chord it))
-          (list chord chord mexp))
+          (k chord chord mexp))
         (let loop ((mexp (lily-chord-parse-start cmd mexp)) (notes '()))
           (or (seq-let (note dur) (lily-chord-parse-end (car mexp))
                 (let ((chord
@@ -48,7 +48,7 @@
                                                                  (cons note notes)
                                                                  notes))))))
                   (lily-duration! chord (or dur (lily-duration prev)))
-                  (list chord chord (cdr mexp))))
+                  (k chord chord (cdr mexp))))
               (loop (cdr mexp) (cons (car mexp) notes)))))))
 
 (set! lily-command-alist
