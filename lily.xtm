@@ -34,11 +34,14 @@
 (define lily-command-alist '())
 
 (define lily-command-handler
-  (lambda (cmd)
+  (lambda (mexp)
     (cl:some (lambda (plugin)
-               (and (memq cmd (cdr plugin))
-                    ;; symbol->function
-                    (eval (car plugin))))
+               (let ((cmds (cdr plugin)))
+                 (and (if (procedure? cmds)
+                          (cmds mexp)
+                          (memq mexp cmds))
+                      ;; symbol->function
+                      (eval (car plugin)))))
              lily-command-alist)))
 
 
