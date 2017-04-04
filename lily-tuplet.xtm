@@ -23,7 +23,7 @@
        ;; Compute the last pitch & dur for the later reference as `prev'.
        (cl:reduce (letrec ((choose
                             (lambda (x y)
-                              (cond ((lily-note? y) y)
+                              (cond ((or (lily-note? y) (lily-chord? y)) y)
                                     ((lily-phrase? y)
                                      (cl:reduce choose (lily-phrase.notes y)))
                                     ((lily-phrase? x)

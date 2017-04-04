@@ -110,6 +110,8 @@
     (aif (lily-typetag ly)
          (memq it lily-music-types))))
 
+(define lily-copy vector-copy)
+
 (define lily-default-note (make-lily-note 'pn 48 'dur 1 'vol 100))
 
 ;; Generic operators
@@ -149,6 +151,11 @@
 
 
 ;;; Parser
+
+(define lily-symbol-peek?
+  (lambda (sym char)
+    (and (symbol? sym)
+         (char=? (string-ref (symbol->string sym) 0) char))))
 
 (define lily-parse-numeric
   (lambda (map regex)
@@ -256,11 +263,18 @@
             ((> pitch pn) (- pitch 12))
             (else (+ pitch 12))))))
 
+(define lily-ref-note
+  (lambda (ref)
+    (cond ((lily-note? ref) ref)
+          ((lily-chord? ref)
+           (car (lily-chord.notes ref))))))
+
 (define lily-rel-pitch
+  ;; Set the octave of NOTE relative to REF.
   (lambda (ref note)
     (when (lily-note? note)
       (let ((pitch
-             (+ (lily-calc-pitch (lily-note.pn ref) note)
+             (+ (lily-calc-pitch (lily-note.pn (lily-ref-note ref)) note)
                 (* (lily-note.os note) 12))))
         (set!lily-note.pn note pitch)
         (set!lily-note.pitch note (+ pitch (lily-note.acc note)))))
@@ -282,22 +296,26 @@
   (lambda (base mexp)
     (letrec ((parse
               (lambda (prev mexp)
-                (if (pair? mexp)
-                    (let ((note (lily-parse-mexp prev (car mexp))))
-                      (cond
-                       ((procedure? note)
-                        (lambda (k)
-                          (let ((result (note (car mexp) prev (cdr mexp))))
-                            (k (car result)
-                               (apply parse (cdr result))))))
-                       (note
-                        (lambda (k)
-                          (k note
-                             (parse
-                              ;; Carry over the last note for `lily-rel-pitch' to work.
-                              (if (lily-note? note) note prev)
-                              (cdr mexp)))))))
-                    (constantly '())))))
+                (cond
+                 ((lily-music? mexp)
+                  (lambda (k)
+                    (k mexp (constantly '()))))
+                 ((pair? mexp)
+                  (let ((note (lily-parse-mexp prev (car mexp))))
+                    (cond
+                     ((procedure? note)
+                      (lambda (k)
+                        (let ((result (note (car mexp) prev (cdr mexp))))
+                          (k (car result)
+                             (apply parse (cdr result))))))
+                     (note
+                      (lambda (k)
+                        (k note
+                           (parse
+                            ;; Carry over the last note for `lily-rel-pitch' to work.
+                            (if (lily-note? note) note prev)
+                            (cdr mexp))))))))
+                 (else (constantly '()))))))
       (parse (if (lily-note? base)
                  base
                  (lily-parse-mexp lily-default-note base))
@@ -311,6 +329,10 @@
          (cond ((lily-phrase? note)
                 (lily-play-music beat inst
                                  (lily-parse-music () (lily-phrase.notes note))))
+               ((lily-chord? note)
+                (for-each (lambda (note)
+                            (lily-play-music beat inst (lily-parse-music () note)))
+                          (lily-chord.notes note)))
                ((lily-cmd? note)
                 ((lily-cmd.cmd note)))
                ((lily-note? note)

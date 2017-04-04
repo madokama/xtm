@@ -1,0 +1,55 @@
+;; Examples:
+;; < c e g >   ; Angle bracketed notes with or without spaces around brackets.
+;; <c e g>
+;; <c e g>4 q2 ; Chord repeat with `q' plus optional duration.
+
+(define lily-chord-matcher
+  (lambda (mexp)
+    (and (symbol? mexp)
+         (or (memq mexp '(< q))
+             (memv (string-ref (symbol->string mexp) 0) '(#\< #\q))))))
+
+(define lily-chord-repeat?
+  (lambda (mexp)
+    (lily-symbol-peek? mexp #\q)))
+
+(define lily-chord-parse-start
+  (lambda (cmd mexp)
+    (if (eq? cmd '<)
+        mexp
+        (seq-let (_ note) (and (symbol? cmd)
+                               (regex:matched (symbol->string cmd) "^<([a-z]+)"))
+          (cons (string->symbol note) mexp)))))
+
+(define lily-chord-parse-end
+  ;; Parse symbols like 'g>2 and return two-element list (NOTE DUR)
+  (lambda (mexp)
+    (and (symbol? mexp)
+         (seq-let (_ note attr)
+             (regex:matched (symbol->string mexp) "^([a-z]+)?>(.*)")
+           (list (and (positive? (string-length note))
+                      (string->symbol note))
+                 (lily-parse-dur attr))))))
+
+(define lily-parse-chord
+  (lambda (cmd prev mexp)
+    (if (lily-chord-repeat? cmd)
+        (let ((chord (lily-copy prev)))
+          (aif (lily-parse-dur (substring (symbol->string cmd) 1))
+               (lily-duration! chord it))
+          (list chord chord mexp))
+        (let loop ((mexp (lily-chord-parse-start cmd mexp)) (notes '()))
+          (or (seq-let (note dur) (lily-chord-parse-end (car mexp))
+                (let ((chord
+                       (make-lily-chord 'notes
+                                        (lily-collect-notes prev
+                                                            (reverse
+                                                             (if note
+                                                                 (cons note notes)
+                                                                 notes))))))
+                  (lily-duration! chord (or dur (lily-duration prev)))
+                  (list chord chord (cdr mexp))))
+              (loop (cdr mexp) (cons (car mexp) notes)))))))
+
+(set! lily-command-alist
+      (cons (cons lily-parse-chord lily-chord-matcher) lily-command-alist))
