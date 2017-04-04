@@ -239,10 +239,8 @@
 
 (define lily-parse-rest
   (lambda (str)
-    (let ((result (regex:matched str lily-regex-rest)))
-      (if (null? result)
-          #f
-          (make-lily-rest 'dur (aif (nth 1 result) (lily-parse-dur it)))))))
+    (seq-let (_ dur) (regex:matched str lily-regex-rest)
+      (make-lily-rest 'dur (and dur (lily-parse-dur dur))))))
 
 (define lily-parse-mexp
   (lambda (prev mexp)
