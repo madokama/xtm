@@ -12,7 +12,7 @@
 (define lily-regex-acc "[ei]s")
 (define lily-regex-os "[',]")
 (define lily-regex-dur "([[:digit:]]+)([.]+)?(.+)?")
-(define lily-regex-dur-multi "[*]([^*]+)") ; duration multiplier (not in lilypond)
+(define lily-regex-dur-multi "[*]([^*]+)") ; duration multiplier
 (define lily-regex-lattr "\\\\([^\\\\]+)")    ; long articulates
 (define lily-regex-sattr "-(.)")              ; short articulates
 
