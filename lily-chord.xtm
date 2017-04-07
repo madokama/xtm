@@ -42,11 +42,11 @@
           (or (seq-let (note dur) (lily-chord-parse-end (car mexp))
                 (let ((chord
                        (make-lily-chord 'notes
-                                        (lily-collect-notes prev
-                                                            (reverse
-                                                             (if note
-                                                                 (cons note notes)
-                                                                 notes))))))
+                                        (lily-serialize-notes
+                                         prev
+                                         (reverse (if note
+                                                      (cons note notes)
+                                                      notes))))))
                   (lily-duration! chord (or dur (lily-duration prev)))
                   (k chord chord (cdr mexp))))
               (loop (cdr mexp) (cons (car mexp) notes)))))))

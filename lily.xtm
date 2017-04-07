@@ -219,18 +219,22 @@
                       'dur (if dur (lily-parse-dur dur) #f)
                       'raw raw))))
 
-(define lily-collect-notes
-  (lambda (base mexp)
+(define lily-serialize-music
+  (lambda (music)
     (letrec ((accum
               (lambda (note next)
                 (cons note (next accum)))))
-      ((lily-parse-music base mexp) accum))))
+      (music accum))))
+
+(define lily-serialize-notes
+  (lambda (base mexp)
+    (lily-serialize-music (lily-parse-music base mexp))))
 
 (define lily-parse-phrase
   ;; Parse given musical expressions all at once, to e.g., obtain the
   ;; entire duration.
   (lambda (base mexp)
-    (let ((notes (lily-collect-notes base mexp)))
+    (let ((notes (lily-serialize-notes base mexp)))
       (make-lily-phrase 'dur (foldl (lambda (acc note)
                                       (+ acc (lily-duration note)))
                                     0
