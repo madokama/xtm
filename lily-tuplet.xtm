@@ -1,8 +1,8 @@
 ;; Examples:
-;; \\tuplet 3/2 (c8 d e)
-;; \\tuplet 3/2 (c4 d \\tuplet 3/2 (e8 f g)) ; nested tuplet (not quite tested)
+;; \tuplet 3/2 (c8 d e)
+;; \tuplet 3/2 (c4 d \tuplet 3/2 (e8 f g)) ; nested tuplet (not quite tested)
 
-(set! lily-command-alist (cons '(lily-parse-tuplet \\tuplet) lily-command-alist))
+(set! lily-command-alist (cons '(lily-parse-tuplet \tuplet) lily-command-alist))
 
 (define lily-tuplet-apply-ratio
   (lambda (ratio tuplet)

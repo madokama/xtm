@@ -1,14 +1,14 @@
 ;; Examples:
 ;;
 ;; Lilypond style:
-;; \\tempo 4 = 90
-;; \\tempo 8. = 120
+;; \tempo 4 = 90
+;; \tempo 8. = 120
 ;;
 ;; Shorthand:
-;; \\bpm 90
+;; \bpm 90
 
 (set! lily-command-alist
-      (cons '(lily-parse-tempo \\tempo \\bpm) lily-command-alist))
+      (cons '(lily-parse-tempo \tempo \bpm) lily-command-alist))
 
 (define lily-tempo-setter
   (lambda (bpm)
@@ -20,14 +20,14 @@
   ;; NOTE dotted duration notation works just by accident.
   (lambda (cmd prev mexp k)
     (case cmd
-      ((\\tempo)
+      ((\tempo)
        (seq-let (unit _ bpm) mexp
          (k (lily-tempo-setter
              (* (lily-parse-dur (number->string unit))
                 bpm))
             prev
             (cdddr mexp))))
-      ((\\bpm)
+      ((\bpm)
        (k (lily-tempo-setter (car mexp))
           prev
           (cdr mexp))))))
