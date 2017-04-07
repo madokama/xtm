@@ -325,6 +325,19 @@
 
 (define lily-play-music
   (lambda (beat inst music)
+(define lily-repeat-music
+  (lambda (music count)
+    (letrec ((notes (lily-serialize-music music))
+             (repeat
+              (lambda (notes~ count)
+                (lambda (k)
+                  (cond ((pair? notes~)
+                         (k (car notes~)
+                            (repeat (cdr notes~) count)))
+                        ((> count 1)
+                         (k (car notes)
+                            (repeat (cdr notes) (pred count)))))))))
+      (repeat notes count))))
     (music
      (lambda (note next)
        (let ((dur (lily-duration note)))
