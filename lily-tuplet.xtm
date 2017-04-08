@@ -14,20 +14,33 @@
     (lily-duration! tuplet (* (lily-duration tuplet) ratio))
     tuplet))
 
+(define lily-tuplet-parse-phrase
+  (lambda (mexp k)
+    (if (pair? (car mexp))
+        (k (car mexp) (cdr mexp))
+        (lily-parse-brackets mexp '{ '}
+                             (lambda (notes attr mexp)
+                               (k notes mexp))))))
+
 (define lily-parse-tuplet
   (lambda (cmd prev mexp k)
-    (let ((ratio (/ 1 (car mexp)))
-          (tuplet (lily-parse-phrase prev (cadr mexp))))
-      (k (lily-tuplet-apply-ratio ratio tuplet)
-         ;; Compute the last pitch & dur for the later reference as `prev'.
-         (cl:reduce (letrec ((choose
-                              (lambda (x y)
-                                (cond ((or (lily-note? y) (lily-chord? y)) y)
-                                      ((lily-phrase? y)
-                                       (cl:reduce choose (lily-phrase.notes y)))
-                                      ((lily-phrase? x)
-                                       (cl:reduce choose (lily-phrase.notes x)))
-                                      (else x)))))
-                      choose)
-                    (lily-phrase.notes tuplet))
-         (cddr mexp)))))
+    (let ((ratio (/ 1 (car mexp))))
+      (lily-tuplet-parse-phrase
+       (cdr mexp)
+       (lambda (notes mexp)
+         (let ((tuplet (lily-parse-phrase prev notes)))
+           (k (lily-tuplet-apply-ratio ratio tuplet)
+              ;; Compute the last pitch & dur for the later reference as `prev'.
+              (cl:reduce (letrec ((choose
+                                   (lambda (x y)
+                                     (cond ((or (lily-note? y) (lily-chord? y)) y)
+                                           ((lily-phrase? y)
+                                            (cl:reduce choose
+                                                       (lily-phrase.notes y)))
+                                           ((lily-phrase? x)
+                                            (cl:reduce choose
+                                                       (lily-phrase.notes x)))
+                                           (else x)))))
+                           choose)
+                         (lily-phrase.notes tuplet))
+              mexp)))))))

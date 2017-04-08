@@ -13,43 +13,23 @@
   (lambda (mexp)
     (lily-symbol-peek? mexp #\q)))
 
-(define lily-chord-parse-start
-  (lambda (cmd mexp)
-    (if (eq? cmd '<)
-        mexp
-        (seq-let (_ note) (and (symbol? cmd)
-                               (regex:matched (symbol->string cmd) "^<([a-z]+)"))
-          (cons (string->symbol note) mexp)))))
-
-(define lily-chord-parse-end
-  ;; Parse symbols like 'g>2 and return two-element list (NOTE DUR)
-  (lambda (mexp)
-    (and (symbol? mexp)
-         (seq-let (_ note attr)
-             (regex:matched (symbol->string mexp) "^([a-z]+)?>(.*)")
-           (list (and (positive? (string-length note))
-                      (string->symbol note))
-                 (lily-parse-dur attr))))))
-
 (define lily-parse-chord
   (lambda (cmd prev mexp k)
     (if (lily-chord-repeat? cmd)
         (let ((chord (lily-copy prev)))
-          (aif (lily-parse-dur (substring (symbol->string cmd) 1))
+          (aif (lily-parse-dur (symbol->string cmd))
                (lily-duration! chord it))
           (k chord chord mexp))
-        (let loop ((mexp (lily-chord-parse-start cmd mexp)) (notes '()))
-          (or (seq-let (note dur) (lily-chord-parse-end (car mexp))
-                (let ((chord
-                       (make-lily-chord 'notes
-                                        (lily-serialize-notes
-                                         prev
-                                         (reverse (if note
-                                                      (cons note notes)
-                                                      notes))))))
-                  (lily-duration! chord (or dur (lily-duration prev)))
-                  (k chord chord (cdr mexp))))
-              (loop (cdr mexp) (cons (car mexp) notes)))))))
+        (lily-parse-brackets
+         (cons cmd mexp) '< '>
+         (lambda (notes attr mexp)
+           (let ((chord
+                  (make-lily-chord 'notes (lily-serialize-notes prev notes))))
+             (lily-duration! chord
+                             (or (lily-parse-dur attr)
+                                 (lily-duration prev)))
+             (let ((chord (lily-apply-attr chord attr)))
+               (k chord chord mexp))))))))
 
 (set! lily-command-alist
       (cons (cons lily-parse-chord lily-chord-matcher) lily-command-alist))

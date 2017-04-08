@@ -259,6 +259,47 @@
                                     notes)
                         'notes notes))))
 
+(define lily-parse-brackets
+  ;; (lily-parse-brackets mexp '< '> (lambda (notes attr mexp)))
+  (lambda (mexp start end k)
+    (letrec ((loop
+              (lambda (mexp nest notes)
+                (continue (car mexp)
+                          (lambda (note)
+                            (loop (cdr mexp)
+                                  (if (eq? note start) (succ nest) nest)
+                                  (cons note notes)))
+                          (lambda (note attr)
+                            (if (zero? nest)
+                                (k (reverse (if note (cons note notes) notes))
+                                   attr
+                                   (cdr mexp))
+                                (loop (cdr mexp)
+                                      (pred nest)
+                                      (cons (car mexp) notes)))))))
+             (continue
+              (lambda (mexp k finally)
+                (or (seq-let (_ note attr)
+                        (regex:matched (atom->string mexp)
+                                       (string-append "^([^"
+                                                      (symbol->string end)
+                                                      "]+)?"
+                                                      (symbol->string end)
+                                                      "(.*)"))
+                      (finally (and (not (string=? note ""))
+                                    (string->sexpr note))
+                               attr))
+                    (k mexp)))))
+      (cond ((eq? (car mexp) start)
+             (loop (cdr mexp) 0 '()))
+            ((regex:matched (atom->string (car mexp))
+                            (string-append "^" (symbol->string start) "(.*)"))
+             => (lambda (matched)
+                  (seq-let (_ str) matched
+                    (loop (cons (string->sexpr str) (cdr mexp))
+                          0
+                          '()))))))))
+
 (define lily-parse-rest
   (lambda (str)
     (seq-let (_ dur) (regex:matched str lily-regex-rest)
