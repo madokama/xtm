@@ -44,6 +44,24 @@
                       (eval (car plugin)))))
              lily-command-alist)))
 
+(define lily-attr-handlers '())
+
+(define lily-parse-attr
+  (lambda (str)
+    (map string->sexpr
+         (append (regex:match-all str lily-regex-lattr)
+                 (regex:match-all str lily-regex-sattr)))))
+
+(define lily-apply-attr
+  (lambda (note str)
+    (foldl (lambda (note attr)
+             (or (cl:some (lambda (handle)
+                            (handle note attr))
+                          lily-attr-handlers)
+                 note))
+           note
+           (lily-parse-attr str))))
+
 
 
 ;;; Musical structs
@@ -251,10 +269,10 @@
     (cond ((lily-music? mexp) mexp)
           ((lily-command-handler mexp) => identity)
           ((symbol? mexp)
-           (let ((note (symbol->string mexp)))
-             (aif (or (lily-parse-note note)
-                      (lily-parse-rest note))
-                  (lily-rel-pitch prev it)))))))
+           (let ((str (symbol->string mexp)))
+             (aif (or (lily-parse-note str)
+                      (lily-parse-rest str))
+                  (lily-rel-pitch prev (lily-apply-attr it str))))))))
 
 (define lily-calc-pitch
   (lambda (pn note)

@@ -1,0 +1,26 @@
+;; Examples:
+;; c4\pp  ; pianissimo
+
+(define lily-parse-cresc
+  (lambda ()
+    ))
+
+(define lily-map-dyn
+  (let* ((dyn '(\sf \fffff \ffff \fff \ff \f \mf \mp \p \pp \ppp \pppp \ppppp))
+         (step (/ (- 2.718281828459045 1)
+                  (length dyn))))
+    (map (lambda (d n)
+           (cons d (* 127 (log n))))
+         dyn
+         (foldl (lambda (acc _)
+                  (cons (+ step (car acc)) acc))
+                '(1)
+                (range (length dyn))))))
+
+(define lily-apply-dyn
+  (lambda (note dyn)
+    (awhen (assq dyn lily-map-dyn)
+      (lily-volume! note (cdr it))
+      note)))
+
+(set! lily-attr-handlers (cons lily-apply-dyn lily-attr-handlers))

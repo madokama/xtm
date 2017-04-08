@@ -7,6 +7,12 @@
               (cadddr form)
               #f))))
 
+(macro awhen
+  (lambda (form)
+    (apply (lambda (awhen test . body)
+             `(aif ,test (begin ,@body) #f))
+           form)))
+
 (define identity (lambda (x) x))
 
 (define constantly
