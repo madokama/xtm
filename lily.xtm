@@ -246,7 +246,7 @@
 
 (define lily-serialize-notes
   (lambda (base mexp)
-    (lily-serialize-music (lily-parse-music base mexp))))
+    (lily-serialize-music (lily-parse-music~ base mexp))))
 
 (define lily-parse-phrase
   ;; Parse given musical expressions all at once, to e.g., obtain the
@@ -259,6 +259,36 @@
                                     notes)
                         'notes notes))))
 
+(define lily-lex
+  ;; Separate brackets with notes.
+  (lambda (mexp)
+    (let ((delim-start
+           (lambda (str)
+             (let ((m (regex:matched str "^([<{])(.+)")))
+               (and (pair? m) (map string->sexpr (cdr m))))))
+          (delim-end
+           (lambda (str)
+             (let* ((end-rx "([^>}]*)([>}][^>}]*)")
+                    (m (regex:match-all str end-rx)))
+               (and (pair? m)
+                    (apply cl:nconc
+                           (map (lambda (str)
+                                  (map string->sexpr
+                                       (filter (lambda (str)
+                                                 (not (string=? str "")))
+                                               (cdr
+                                                (regex:matched str end-rx)))))
+                                m)))))))
+      (foldr (lambda (term acc)
+               (let ((str (atom->string term)))
+                 (cond ((delim-start str) => (lambda (terms)
+                                               (append terms acc)))
+                       ((delim-end str) => (lambda (terms)
+                                             (append terms acc)))
+                       (else (cons term acc)))))
+             '()
+             mexp))))
+
 (define lily-parse-brackets
   ;; (lily-parse-brackets mexp '< '> (lambda (notes attr mexp)))
   (lambda (mexp start end k)
@@ -269,36 +299,22 @@
                             (loop (cdr mexp)
                                   (if (eq? note start) (succ nest) nest)
                                   (cons note notes)))
-                          (lambda (note attr)
+                          (lambda (attr)
                             (if (zero? nest)
-                                (k (reverse (if note (cons note notes) notes))
-                                   attr
-                                   (cdr mexp))
+                                (k (reverse notes) attr (cdr mexp))
                                 (loop (cdr mexp)
                                       (pred nest)
                                       (cons (car mexp) notes)))))))
              (continue
-              (lambda (mexp k finally)
-                (or (seq-let (_ note attr)
-                        (regex:matched (atom->string mexp)
-                                       (string-append "^([^"
-                                                      (symbol->string end)
-                                                      "]+)?"
-                                                      (symbol->string end)
-                                                      "(.*)"))
-                      (finally (and (not (string=? note ""))
-                                    (string->sexpr note))
-                               attr))
-                    (k mexp)))))
-      (cond ((eq? (car mexp) start)
-             (loop (cdr mexp) 0 '()))
-            ((regex:matched (atom->string (car mexp))
-                            (string-append "^" (symbol->string start) "(.*)"))
-             => (lambda (matched)
-                  (seq-let (_ str) matched
-                    (loop (cons (string->sexpr str) (cdr mexp))
-                          0
-                          '()))))))))
+              (lambda (mexp next finally)
+                (let ((m (regex:matched (atom->string mexp)
+                                        (string-append "^" (symbol->string end)
+                                                       "(.*)"))))
+                  (if (null? m)
+                      (next mexp)
+                      (finally (cadr m)))))))
+      (and (eq? (car mexp) start)
+           (loop (cdr mexp) 0 '())))))
 
 (define lily-parse-rest
   (lambda (str)
@@ -353,7 +369,7 @@
 
 ;;; User Interface
 
-(define lily-parse-music
+(define lily-parse-music~
   (lambda (base mexp)
     (letrec ((parse
               (lambda (prev mexp)
@@ -377,10 +393,14 @@
                             (if (lily-note? note) note prev)
                             (cdr mexp))))))))
                  (else (constantly '()))))))
-      (parse (if (lily-note? base)
-                 base
-                 (lily-parse-mexp lily-default-note base))
-             mexp))))
+      (parse base mexp))))
+
+(define lily-parse-music
+  (lambda (base mexp)
+    (lily-parse-music~ (if (lily-note? base)
+                           base
+                           (lily-parse-mexp lily-default-note base))
+                       (lily-lex mexp))))
 
 (define lily-repeat-music
   (lambda (music count)
@@ -403,10 +423,11 @@
        (let ((dur (lily-duration note)))
          (cond ((lily-phrase? note)
                 (lily-play-music~ beat play
-                                  (lily-parse-music () (lily-phrase.notes note))))
+                                  (lily-parse-music~ () (lily-phrase.notes note))))
                ((lily-chord? note)
                 (for-each (lambda (note)
-                            (lily-play-music~ beat play (lily-parse-music () note)))
+                            (lily-play-music~ beat play
+                                              (lily-parse-music~ () note)))
                           (lily-chord.notes note)))
                ((lily-cmd? note)
                 ((lily-cmd.cmd note)))

@@ -7,7 +7,7 @@
   (lambda (mexp)
     (and (symbol? mexp)
          (or (memq mexp '(< q))
-             (memv (string-ref (symbol->string mexp) 0) '(#\< #\q))))))
+             (char=? (string-ref (symbol->string mexp) 0) #\q)))))
 
 (define lily-chord-repeat?
   (lambda (mexp)
