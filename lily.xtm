@@ -370,30 +370,29 @@
 ;;; User Interface
 
 (define lily-parse-music~
-  (lambda (base mexp)
-    (letrec ((parse
-              (lambda (prev mexp)
-                (cond
-                 ((lily-music? mexp)
-                  (lambda (k)
-                    (k mexp (constantly '()))))
-                 ((pair? mexp)
-                  (let ((note (lily-parse-mexp prev (car mexp))))
-                    (cond
-                     ((procedure? note)
-                      (lambda (k)
-                        (note (car mexp) prev (cdr mexp)
-                              (lambda (note last mexp)
-                                (k note (parse last mexp))))))
-                     (note
-                      (lambda (k)
-                        (k note
-                           (parse
-                            ;; Carry over the last note for `lily-rel-pitch' to work.
-                            (if (lily-note? note) note prev)
-                            (cdr mexp))))))))
-                 (else (constantly '()))))))
-      (parse base mexp))))
+  (letrec ((parse
+            (lambda (prev mexp)
+              (cond
+               ((lily-music? mexp)
+                (lambda (k)
+                  (k mexp (constantly '()))))
+               ((pair? mexp)
+                (let ((note (lily-parse-mexp prev (car mexp))))
+                  (cond
+                   ((procedure? note)
+                    (lambda (k)
+                      (note (car mexp) prev (cdr mexp)
+                            (lambda (note last mexp)
+                              (k note (parse last mexp))))))
+                   (note
+                    (lambda (k)
+                      (k note
+                         (parse
+                          ;; Carry over the last note for `lily-rel-pitch' to work.
+                          (if (lily-note? note) note prev)
+                          (cdr mexp))))))))
+               (else (constantly '()))))))
+    parse))
 
 (define lily-parse-music
   (lambda (base mexp)
