@@ -75,23 +75,17 @@
                 (defstruct ,type ,@fields)
                 (set! lily-music-types (cons ',type lily-music-types))
                 ,@(map (lambda (field)
-                        (let ((f (symbol->string (if (pair? field)
-                                                     (car field)
-                                                     field))))
+                        (let ((field (if (pair? field) (car field) field)))
                           `(begin
                              ;; Install get/set operators on TYPE into
                              ;; the music-type system.
-                             (put ',(string->symbol f)
+                             (put ',field
                                   ',type
-                                  (string->symbol
-                                   (string-append (symbol->string ',type)
-                                                  "." ,f)))
-                             (put ',(string->symbol (string-append f "!"))
+                                  ',(string->symbol (format "~s.~s" type field)))
+                             (put ',(string->symbol (format "~s!" field))
                                   ',type
-                                  (string->symbol
-                                   (string-append "set!"
-                                                  (symbol->string ',type)
-                                                  "." ,f))))))
+                                  ',(string->symbol
+                                     (format "set!~s.~s" type field))))))
                       fields)))
            form)))
 
@@ -280,7 +274,7 @@
                                                 (regex:matched str end-rx)))))
                                 m)))))))
       (foldr (lambda (term acc)
-               (let ((str (atom->string term)))
+               (let ((str (format "~s" term)))
                  (cond ((delim-start str) => (lambda (terms)
                                                (append terms acc)))
                        ((delim-end str) => (lambda (terms)
@@ -308,8 +302,7 @@
              (continue
               (lambda (mexp next finally)
                 (let ((m (regex:matched (atom->string mexp)
-                                        (string-append "^" (symbol->string end)
-                                                       "(.*)"))))
+                                        (format "^~s(.*)" end))))
                   (if (null? m)
                       (next mexp)
                       (finally (cadr m)))))))
