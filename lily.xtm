@@ -389,9 +389,7 @@
 
 (define lily-parse-music
   (lambda (base mexp)
-    (lily-parse-music~ (if (lily-note? base)
-                           base
-                           (lily-parse-mexp lily-default-note base))
+    (lily-parse-music~ (lily-parse-mexp lily-default-note base)
                        (lily-lex mexp))))
 
 (define lily-repeat-music
