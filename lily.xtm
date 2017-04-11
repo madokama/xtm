@@ -408,32 +408,34 @@
                             (repeat (cdr notes) (pred count)))))))))
       (repeat notes count))))
 
-(define lily-play-music~
+(define lily-play-voice
   (lambda (beat play music)
     (music
      (lambda (note next)
        (let ((dur (lily-duration note)))
          (cond ((lily-phrase? note)
-                (lily-play-music~ beat play
-                                  (lily-parse-music~ () (lily-phrase.notes note))))
+                (lily-play-voice beat play
+                                 (lily-parse-music~ () (lily-phrase.notes note))))
                ((lily-chord? note)
                 (for-each (lambda (note)
-                            (lily-play-music~ beat play
-                                              (lily-parse-music~ () note)))
+                            (lily-play-voice beat play
+                                             (lily-parse-music~ () note)))
                           (lily-chord.notes note)))
                ((lily-cmd? note)
                 ((lily-cmd.cmd note)))
                ((lily-note? note)
                 (play beat note)))
          (callback (*metro* (+ beat (* 0.5 dur)))
-                   'lily-play-music~ (+ beat dur) play next))))))
+                   'lily-play-voice (+ beat dur) play next))))))
 
 (define lily-play-music
-  (lambda (beat inst music)
-    (lily-play-music~ beat
-                      (lambda (beat note)
-                        (play-note (*metro* beat) inst
-                                   (lily-note.pitch note)
-                                   (lily-note.vol note)
-                                   (*metro* 'dur (lily-duration note))))
-                      music)))
+  (lambda (beat inst . voices)
+    (let ((play
+           (lambda (beat note)
+             (play-note (*metro* beat) inst
+                        (lily-note.pitch note)
+                        (lily-note.vol note)
+                        (*metro* 'dur (lily-duration note))))))
+      (for-each (lambda (voice)
+                  (lily-play-voice beat play voice))
+                voices))))
