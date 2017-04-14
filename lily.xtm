@@ -122,7 +122,15 @@
     (aif (lily-typetag ly)
          (memq it lily-music-types))))
 
-(define lily-copy vector-copy)
+(define lily-copy
+  (lambda (ly)
+    (cond ((vector? ly)
+           (make-vector-with-proc (vector-length ly)
+                                  (lambda (i)
+                                    (lily-copy (vector-ref ly i)))))
+          ((list? ly)
+           (map lily-copy ly))
+          (else ly))))
 
 (define lily-default-note (make-lily-note 'pn 48 'dur 1 'vol 100))
 
@@ -382,7 +390,12 @@
                       (k note
                          (parse
                           ;; Carry over the last note for `lily-rel-pitch' to work.
-                          (if (lily-note? note) note prev)
+                          (if (lily-note? note)
+                              note
+                              (let ((prev~ (lily-copy prev)))
+                                ;; Inherit duration from rest.
+                                (lily-duration! prev~ (lily-duration note))
+                                prev~))
                           (cdr mexp))))))))
                (else (constantly '()))))))
     parse))

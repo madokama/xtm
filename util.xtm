@@ -61,9 +61,3 @@
                                            form))))
                         ,@body)))))
            form)))
-
-(define vector-copy
-  (lambda (v)
-    (make-vector-with-proc (vector-length v)
-                           (lambda (i)
-                             (vector-ref v i)))))
