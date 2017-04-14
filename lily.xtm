@@ -270,7 +270,8 @@
                (and (pair? m) (map string->sexpr (cdr m))))))
           (delim-end
            (lambda (str)
-             (let* ((end-rx "([^>}]*)([>}][^>}]*)")
+             ;; Split closing bracket only if it directly follows a pitch name.
+             (let* ((end-rx "^([a-z]*)([>}][^>}]*)")
                     (m (regex:match-all str end-rx)))
                (and (pair? m)
                     (apply cl:nconc
