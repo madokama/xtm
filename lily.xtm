@@ -407,7 +407,7 @@
                        (lily-lex mexp))))
 
 (define lily-repeat-music
-  (lambda (music count)
+  (lambda (music . count)
     (letrec ((notes (lily-serialize-music music))
              (repeat
               (lambda (notes~ count)
@@ -418,7 +418,10 @@
                         ((> count 1)
                          (k (car notes)
                             (repeat (cdr notes) (pred count)))))))))
-      (repeat notes count))))
+      (repeat notes
+              (if (pair? count)
+                  (car count)
+                  2305843009213693951)))))
 
 (define lily-play-voice
   (lambda (beat play music)
