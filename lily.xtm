@@ -48,8 +48,11 @@
 
 (define lily-parse-attr
   (lambda (str)
-    (map string->sexpr
-         (append (regex:match-all str lily-regex-lattr)
+    (append (map string->sexpr
+                 (regex:match-all str lily-regex-lattr))
+            (map (lambda (sh)
+                   (aif (assoc sh lily-arts-shorthand)
+                        (cdr it)))
                  (regex:match-all str lily-regex-sattr)))))
 
 (define lily-apply-attr
@@ -58,7 +61,10 @@
              (or (cl:some (lambda (handle)
                             (handle note attr))
                           lily-attr-handlers)
-                 note))
+                 (begin
+                   ;; Defer processing till play phase.
+                   (lily-articulations! note (cons attr (lily-articulations note)))
+                   note)))
            note
            (lily-parse-attr str))))
 
@@ -97,8 +103,7 @@
   pitch
   dur
   (vol #f)
-  ;; TODO
-  ;; - offset (for arpeggio, glissando, triplet etc.)
+  arts                                  ; list of articulations
   raw)
 
 (lily-deftype lily-rest
@@ -148,6 +153,8 @@
 (define lily-duration! (lily-generic 'dur!))
 (define lily-volume (lily-generic 'vol))
 (define lily-volume! (lily-generic 'vol!))
+(define lily-articulations (lily-generic 'arts))
+(define lily-articulations! (lily-generic 'arts!))
 
 ;; Some ad-hoc operators
 
@@ -166,6 +173,16 @@
      (lambda (chord vol)
        (for-each (lambda (note)
                    (lily-volume! note vol))
+                 (lily-chord.notes chord))))
+
+(put 'arts 'lily-chord
+     (lambda (chord arts)
+       (lily-articulations (car (lily-chord.notes chord)))))
+
+(put 'arts! 'lily-chord
+     (lambda (chord arts)
+       (for-each (lambda (note)
+                   (lily-articulations! note arts))
                  (lily-chord.notes chord))))
 
 
@@ -443,14 +460,22 @@
          (callback (*metro* (+ beat (* 0.5 dur)))
                    'lily-play-voice (+ beat dur) play next))))))
 
+(define lily-call-player
+  ;; Wrapper function for custom players.
+  (lambda (play)
+    (lambda (beat note)
+      (let ((arts (lily-articulations note)))
+        (play (*metro* beat)
+              (lily-note.pitch note)
+              (lily-arts-dyn (lily-volume note) arts)
+              (lily-arts-dur (*metro* 'dur (lily-duration note))
+                             arts))))))
+
 (define lily-play-music
   (lambda (beat inst . voices)
-    (let ((play
-           (lambda (beat note)
-             (play-note (*metro* beat) inst
-                        (lily-note.pitch note)
-                        (lily-note.vol note)
-                        (*metro* 'dur (lily-duration note))))))
-      (for-each (lambda (voice)
-                  (lily-play-voice beat play voice))
-                voices))))
+    (for-each (partial lily-play-voice
+                       beat
+                       (lily-call-player
+                        (lambda (time pitch vol dur)
+                          (play-note time inst pitch vol dur))))
+              voices)))

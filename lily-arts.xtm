@@ -1,0 +1,34 @@
+
+(define lily-arts-shorthand
+  '(("-^" . \marcato)
+    ("-+" . \stopped)
+    ("--" . \tenuto)
+    ("-!" . \staccatissimo)
+    ("->" . \accent)
+    ("-." . \staccato)
+    ("-_" . \portato)))
+
+(define lily-arts-dyn-alist
+  `((\accent . ,(lambda (vol)
+                  (min (random (* vol 1.1)
+                               (* vol 1.2))
+                       127)))))
+
+(define lily-arts-dur-alist
+  `((\staccato . ,(lambda (dur) (* 0.1 dur)))))
+
+(define lily-arts-generic
+  (lambda (alist)
+    (lambda (val arts)
+      (or (cl:some (lambda (art)
+                     (aif (assq art alist)
+                          ((cdr it) val)))
+                   arts)
+          val))))
+
+(define lily-arts-dyn
+  (lily-arts-generic lily-arts-dyn-alist))
+
+(define lily-arts-dur
+  (lily-arts-generic lily-arts-dur-alist))
+

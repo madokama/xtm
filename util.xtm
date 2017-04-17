@@ -28,6 +28,11 @@
                    (f (apply g x))))
                fs)))
 
+(define partial
+  (lambda (f . fixed)
+    (lambda args
+      (apply f (append fixed args)))))
+
 (define orf
   (lambda fs
     (lambda x
