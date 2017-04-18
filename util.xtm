@@ -33,6 +33,11 @@
     (lambda args
       (apply f (append fixed args)))))
 
+(define negate
+  (lambda (f)
+    (lambda args
+      (not (apply f args)))))
+
 (define orf
   (lambda fs
     (lambda x
@@ -80,3 +85,8 @@
                                   (null? ,(caar bindings)))
                         ,(loop (cdr bindings)))))))
            form)))
+
+(define string-empty?
+  (lambda (str)
+    (zero? (string-length str))))
+

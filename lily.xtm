@@ -167,7 +167,7 @@
 
 (put 'vol 'lily-chord
      (lambda (chord)
-       (lily-note.vol (car (lily-chord.notes chord)))))
+       (lily-volume (car (lily-chord.notes chord)))))
 
 (put 'vol! 'lily-chord
      (lambda (chord vol)
@@ -294,8 +294,7 @@
                     (apply cl:nconc
                            (map (lambda (str)
                                   (map string->sexpr
-                                       (filter (lambda (str)
-                                                 (not (string=? str "")))
+                                       (filter (negate string-empty?)
                                                (cdr
                                                 (regex:matched str end-rx)))))
                                 m)))))))
