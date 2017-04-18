@@ -66,3 +66,17 @@
                                            form))))
                         ,@body)))))
            form)))
+
+(macro when-let
+  (lambda (form)
+    (apply (lambda (when-let bindings . body)
+             (let loop ((bindings (if (pair? (car bindings))
+                                      bindings
+                                      (list bindings))))
+               (if (null? bindings)
+                   `(begin . ,body)
+                   `(let ((,(caar bindings) ,(cadar bindings)))
+                      (unless (or (not ,(caar bindings))
+                                  (null? ,(caar bindings)))
+                        ,(loop (cdr bindings)))))))
+           form)))

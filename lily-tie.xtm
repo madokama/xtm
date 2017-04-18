@@ -1,0 +1,79 @@
+;; Examples:
+;; a2~ a4~ a16
+;; <c e g>4~ <c e g c>     => <c2 e2 g2>4 c4
+;; <c~ e g~ b>4 <c e g b>  => <c2 e4 g2 b4>4 <e b>4
+
+(define lily-str-tie?
+  (lambda (str)
+    (regex:match? str "~")))
+
+(define lily-tie?
+  (lambda (note)
+    (cond ((lily-note? note) (lily-str-tie? (lily-note.raw note)))
+          ((lily-chord? note)
+           (or (lily-str-tie? (lily-chord.attr note))
+               (cl:some lily-tie? (lily-chord.notes note))))
+          (else #f))))
+
+(define lily-tie-normalize
+  (lambda (note)
+    (if (lily-chord? note)
+        (begin
+          (when (lily-str-tie? (lily-chord.attr note))
+            (for-each (lambda (note)
+                        (set!lily-note.raw note
+                                           (format "~a~~" (lily-note.raw note))))
+                      (lily-chord.notes note)))
+          note)
+        (make-lily-chord 'notes (list note)
+                         'dur (lily-duration note)))))
+
+(define lily-tie-join1
+  (lambda (head tail)
+    (let ((pitch (lily-note.pitch head)))
+      (let loop ((tail tail))
+        (when (pair? tail)
+          (when-let (match (cl:find-if (compose (partial = pitch) lily-note.pitch)
+                                       (lily-chord.notes (car tail))))
+            (lily-duration! head (+ (lily-duration head) (lily-duration match)))
+            (lily-duration! match 0)
+            (when (lily-tie? match)
+              (loop (cdr tail)))))))))
+
+(define lily-tie-join
+  (lambda (note notes k)
+    (let ((tie (map lily-tie-normalize (cons note notes))))
+      (for-each (lambda (head)
+                  (when (lily-tie? head)
+                    (lily-tie-join1 head (cdr tie))))
+                (lily-chord.notes (car tie)))
+      (k (car tie) (cdr tie)))))
+
+(define lily-ties
+  (lambda (note mexp k)
+    (letrec ((loop
+              (lambda (prev mexp notes)
+                (let ((note (lily-parse-mexp prev (car mexp))))
+                  (cond ((procedure? note)
+                         (note (car mexp) prev (cdr mexp)
+                               (lambda (note last mexp)
+                                 (if (lily-tie? note)
+                                     (loop note mexp (cons note notes))
+                                     (finally (reverse (cons note notes))
+                                              mexp)))))
+                        (note
+                         (if (lily-tie? note)
+                             (loop note (cdr mexp) (cons note notes))
+                             (finally (reverse (cons note notes)) (cdr mexp))))))))
+             (finally
+              (lambda (notes mexp)
+                (lily-tie-join note notes
+                               (lambda (note mexp~)
+                                 (k note (append mexp~ mexp)))))))
+      (loop note mexp '()))))
+
+(define lily-may-tie
+  (lambda (note mexp k)
+    (if (lily-tie? note)
+        (lily-ties note mexp k)
+        (k note mexp))))

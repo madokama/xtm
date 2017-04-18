@@ -24,7 +24,8 @@
          (cons cmd mexp) '< '>
          (lambda (notes attr mexp)
            (let ((chord
-                  (make-lily-chord 'notes (lily-serialize-notes prev notes))))
+                  (make-lily-chord 'notes (lily-serialize-notes prev notes)
+                                   'attr attr)))
              (lily-duration! chord
                              (or (lily-parse-dur attr)
                                  (lily-duration prev)))

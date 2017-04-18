@@ -113,7 +113,7 @@
   dur notes)
 
 (lily-deftype lily-chord
-  dur notes)
+  dur notes (attr ""))
 
 (lily-deftype lily-cmd
   dur cmd)
@@ -389,7 +389,13 @@
 ;;; User Interface
 
 (define lily-parse-music~
-  (letrec ((parse
+  (letrec ((may-tie
+            (lambda (k)
+              (lambda (note last mexp)
+                (lily-may-tie note mexp
+                              (lambda (note mexp)
+                                (k note (parse last mexp)))))))
+           (parse
             (lambda (prev mexp)
               (cond
                ((lily-music? mexp)
@@ -400,21 +406,19 @@
                   (cond
                    ((procedure? note)
                     (lambda (k)
-                      (note (car mexp) prev (cdr mexp)
-                            (lambda (note last mexp)
-                              (k note (parse last mexp))))))
+                      (note (car mexp) prev (cdr mexp) (may-tie k))))
                    (note
                     (lambda (k)
-                      (k note
-                         (parse
-                          ;; Carry over the last note for `lily-rel-pitch' to work.
-                          (if (lily-note? note)
-                              note
-                              (let ((prev~ (lily-copy prev)))
-                                ;; Inherit duration from rest.
-                                (lily-duration! prev~ (lily-duration note))
-                                prev~))
-                          (cdr mexp))))))))
+                      ((may-tie k)
+                       note
+                       ;; Carry over the last note for `lily-rel-pitch' to work.
+                       (if (lily-rest? note)
+                           (let ((prev~ (lily-copy prev)))
+                             ;; Inherit duration from rest.
+                             (lily-duration! prev~ (lily-duration note))
+                             prev~)
+                           note)
+                       (cdr mexp)))))))
                (else (constantly '()))))))
     parse))
 
