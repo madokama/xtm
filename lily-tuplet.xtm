@@ -10,7 +10,7 @@
                 (if (lily-phrase? note)
                     (lily-tuplet-apply-ratio ratio note)
                     (lily-duration! note (* (lily-duration note) ratio))))
-              (lily-phrase.notes tuplet))
+              (lily-notes tuplet))
     (lily-duration! tuplet (* (lily-duration tuplet) ratio))
     tuplet))
 

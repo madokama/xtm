@@ -155,6 +155,7 @@
 (define lily-volume! (lily-generic 'vol!))
 (define lily-articulations (lily-generic 'arts))
 (define lily-articulations! (lily-generic 'arts!))
+(define lily-notes (lily-generic 'notes))
 
 ;; Some ad-hoc operators
 
@@ -162,28 +163,28 @@
      (lambda (chord dur)
        (for-each (lambda (note)
                    (lily-duration! note dur))
-                 (lily-chord.notes chord))
+                 (lily-notes chord))
        (set!lily-chord.dur chord dur)))
 
 (put 'vol 'lily-chord
      (lambda (chord)
-       (lily-volume (car (lily-chord.notes chord)))))
+       (lily-volume (car (lily-notes chord)))))
 
 (put 'vol! 'lily-chord
      (lambda (chord vol)
        (for-each (lambda (note)
                    (lily-volume! note vol))
-                 (lily-chord.notes chord))))
+                 (lily-notes chord))))
 
 (put 'arts 'lily-chord
      (lambda (chord arts)
-       (lily-articulations (car (lily-chord.notes chord)))))
+       (lily-articulations (car (lily-notes chord)))))
 
 (put 'arts! 'lily-chord
      (lambda (chord arts)
        (for-each (lambda (note)
                    (lily-articulations! note arts))
-                 (lily-chord.notes chord))))
+                 (lily-notes chord))))
 
 
 
@@ -362,7 +363,7 @@
   (lambda (ref)
     (cond ((lily-note? ref) ref)
           ((lily-chord? ref)
-           (car (lily-chord.notes ref))))))
+           (car (lily-notes ref))))))
 
 (define lily-rel-pitch
   ;; Set the octave of NOTE relative to REF.
@@ -450,12 +451,12 @@
        (let ((dur (lily-duration note)))
          (cond ((lily-phrase? note)
                 (lily-play-voice beat play
-                                 (lily-parse-music~ () (lily-phrase.notes note))))
+                                 (lily-parse-music~ () (lily-notes note))))
                ((lily-chord? note)
                 (for-each (lambda (note)
                             (lily-play-voice beat play
                                              (lily-parse-music~ () note)))
-                          (lily-chord.notes note)))
+                          (lily-notes note)))
                ((lily-cmd? note)
                 ((lily-cmd.cmd note)))
                ((lily-note? note)

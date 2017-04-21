@@ -12,7 +12,7 @@
     (cond ((lily-note? note) (lily-str-tie? (lily-note.raw note)))
           ((lily-chord? note)
            (or (lily-str-tie? (lily-chord.attr note))
-               (cl:some lily-tie? (lily-chord.notes note))))
+               (cl:some lily-tie? (lily-notes note))))
           (else #f))))
 
 (define lily-tie-normalize
@@ -23,7 +23,7 @@
             (for-each (lambda (note)
                         (set!lily-note.raw note
                                            (format "~a~~" (lily-note.raw note))))
-                      (lily-chord.notes note)))
+                      (lily-notes note)))
           note)
         (make-lily-chord 'notes (list note)
                          'dur (lily-duration note)))))
@@ -34,7 +34,7 @@
       (let loop ((tail tail))
         (when (pair? tail)
           (when-let (match (cl:find-if (compose (partial = pitch) lily-note.pitch)
-                                       (lily-chord.notes (car tail))))
+                                       (lily-notes (car tail))))
             (lily-duration! head (+ (lily-duration head) (lily-duration match)))
             (lily-duration! match 0)
             (when (lily-tie? match)
@@ -46,7 +46,7 @@
       (for-each (lambda (head)
                   (when (lily-tie? head)
                     (lily-tie-join1 head (cdr tie))))
-                (lily-chord.notes (car tie)))
+                (lily-notes (car tie)))
       (k (car tie) (cdr tie)))))
 
 (define lily-ties
