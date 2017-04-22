@@ -250,12 +250,12 @@
 
 (define lily-parse-note
   (lambda (str)
-    (seq-let (raw pc acc os dur) (regex:matched str lily-regex-note)
+    (seq-let (_ pc acc os dur) (regex:matched str lily-regex-note)
       (make-lily-note 'pc (cdr (assoc pc lily-map-pc))
                       'acc (if acc (lily-parse-acc acc) 0)
                       'os (if os (lily-parse-os os) 0)
                       'dur (if dur (lily-parse-dur dur) #f)
-                      'raw raw))))
+                      'raw str))))
 
 (define lily-serialize-music
   (lambda (music)
