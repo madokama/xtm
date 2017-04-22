@@ -46,14 +46,22 @@
 
 (define lily-attr-handlers '())
 
+(define lily-parse-lattr
+  (lambda (str)
+    (map string->sexpr
+         (regex:match-all str lily-regex-lattr))))
+
+(define lily-parse-sattr
+  (lambda (str)
+    (map (lambda (sh)
+           (aif (assoc sh lily-arts-shorthand)
+                (cdr it)))
+         (regex:match-all str lily-regex-sattr))))
+
 (define lily-parse-attr
   (lambda (str)
-    (append (map string->sexpr
-                 (regex:match-all str lily-regex-lattr))
-            (map (lambda (sh)
-                   (aif (assoc sh lily-arts-shorthand)
-                        (cdr it)))
-                 (regex:match-all str lily-regex-sattr)))))
+    (append (lily-parse-lattr str)
+            (lily-parse-sattr str))))
 
 (define lily-apply-attr
   (lambda (note str)
@@ -268,6 +276,27 @@
   (lambda (base mexp)
     (lily-serialize-music (lily-parse-music~ base mexp))))
 
+(define lily-return-phrase
+  (lambda (phrase mexp k)
+    (k phrase
+       ;; Compute the last pitch & dur for the later reference as `prev'.
+       (cl:reduce (letrec ((choose
+                            (lambda (x y)
+                              (cond ((or (lily-note? y) (lily-chord? y)) y)
+                                    ((lily-phrase? y)
+                                     (cl:reduce choose
+                                                (lily-notes y)))
+                                    ((lily-phrase? x)
+                                     (cl:reduce choose
+                                                (lily-notes x)))
+                                    (else
+                                     (let ((x~ (lily-copy x)))
+                                       (lily-duration! x~ (lily-duration y))
+                                       x~))))))
+                    choose)
+                  (lily-notes phrase))
+       mexp)))
+
 (define lily-parse-phrase
   ;; Parse given musical expressions all at once, to e.g., obtain the
   ;; entire duration.
@@ -282,30 +311,28 @@
 (define lily-lex
   ;; Separate brackets with notes.
   (lambda (mexp)
-    (let ((delim-start
-           (lambda (str)
-             (let ((m (regex:matched str "^([<{])(.+)")))
-               (and (pair? m) (map string->sexpr (cdr m))))))
-          (delim-end
-           (lambda (str)
-             ;; Split closing bracket only if it directly follows a pitch name.
-             (let* ((end-rx "^([a-z]*)([>}][^>}]*)")
-                    (m (regex:match-all str end-rx)))
-               (and (pair? m)
-                    (apply cl:nconc
-                           (map (lambda (str)
-                                  (map string->sexpr
-                                       (filter (negate string-empty?)
-                                               (cdr
-                                                (regex:matched str end-rx)))))
-                                m)))))))
+    (let* ((delim-start
+            (lambda (str)
+              (let ((m (regex:matched str "^([<{])(.+)")))
+                (and (pair? m) (map string->sexpr (cdr m))))))
+           (delim-end
+            (lambda (str)
+              ;; Split closing bracket only if it directly follows a pitch name.
+              (let* ((end-rx "^([a-z]*)([>}][^>}]*)")
+                     (m (regex:match-all str end-rx)))
+                (and (pair? m)
+                     (apply cl:nconc
+                            (map (lambda (str)
+                                   (map string->sexpr
+                                        (filter (negate string-empty?)
+                                                (cdr
+                                                 (regex:matched str end-rx)))))
+                                 m))))))
+           (delim (orf delim-start delim-end)))
       (foldr (lambda (term acc)
-               (let ((str (format "~s" term)))
-                 (cond ((delim-start str) => (lambda (terms)
-                                               (append terms acc)))
-                       ((delim-end str) => (lambda (terms)
-                                             (append terms acc)))
-                       (else (cons term acc)))))
+               (aif (delim (format "~s" term))
+                    (append it acc)
+                    (cons term acc)))
              '()
              mexp))))
 
@@ -340,15 +367,20 @@
     (seq-let (_ dur) (regex:matched str lily-regex-rest)
       (make-lily-rest 'dur (and dur (lily-parse-dur dur))))))
 
+(define lily-parse-symbol
+  (lambda (prev mexp)
+    (let ((str (symbol->string mexp)))
+      (aif (or (lily-parse-note str)
+               (lily-parse-rest str))
+           (lily-rel-pitch prev (lily-apply-attr it str))))))
+
 (define lily-parse-mexp
   (lambda (prev mexp)
     (cond ((lily-music? mexp) mexp)
-          ((lily-command-handler mexp) => identity)
+          ((lily-command-handler mexp) => (lambda (handle)
+                                            (partial handle mexp prev)))
           ((symbol? mexp)
-           (let ((str (symbol->string mexp)))
-             (aif (or (lily-parse-note str)
-                      (lily-parse-rest str))
-                  (lily-rel-pitch prev (lily-apply-attr it str))))))))
+           (lily-parse-symbol prev mexp)))))
 
 (define lily-calc-pitch
   (lambda (pn note)
@@ -406,7 +438,7 @@
                   (cond
                    ((procedure? note)
                     (lambda (k)
-                      (note (car mexp) prev (cdr mexp) (may-tie k))))
+                      (note (cdr mexp) (may-tie k))))
                    (note
                     (lambda (k)
                       ((may-tie k)

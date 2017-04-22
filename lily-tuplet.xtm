@@ -28,19 +28,6 @@
       (lily-tuplet-parse-phrase
        (cdr mexp)
        (lambda (notes mexp)
-         (let ((tuplet (lily-parse-phrase prev notes)))
-           (k (lily-tuplet-apply-ratio ratio tuplet)
-              ;; Compute the last pitch & dur for the later reference as `prev'.
-              (cl:reduce (letrec ((choose
-                                   (lambda (x y)
-                                     (cond ((or (lily-note? y) (lily-chord? y)) y)
-                                           ((lily-phrase? y)
-                                            (cl:reduce choose
-                                                       (lily-phrase.notes y)))
-                                           ((lily-phrase? x)
-                                            (cl:reduce choose
-                                                       (lily-phrase.notes x)))
-                                           (else x)))))
-                           choose)
-                         (lily-phrase.notes tuplet))
-              mexp)))))))
+         (lily-return-phrase
+          (lily-tuplet-apply-ratio ratio (lily-parse-phrase prev notes))
+          mexp k))))))

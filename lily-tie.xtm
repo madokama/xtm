@@ -55,7 +55,7 @@
               (lambda (prev mexp notes)
                 (let ((note (lily-parse-mexp prev (car mexp))))
                   (cond ((procedure? note)
-                         (note (car mexp) prev (cdr mexp)
+                         (note (cdr mexp)
                                (lambda (note last mexp)
                                  (if (lily-tie? note)
                                      (loop note mexp (cons note notes))
