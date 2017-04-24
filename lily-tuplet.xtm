@@ -28,6 +28,5 @@
       (lily-tuplet-parse-phrase
        (cdr mexp)
        (lambda (notes mexp)
-         (lily-return-phrase
-          (lily-tuplet-apply-ratio ratio (lily-parse-phrase prev notes))
-          mexp k))))))
+         (k (lily-tuplet-apply-ratio ratio (lily-parse-phrase prev notes))
+            prev mexp))))))

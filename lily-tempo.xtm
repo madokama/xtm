@@ -21,12 +21,11 @@
   (lambda (cmd prev mexp k)
     (case cmd
       ((\tempo)
-       (seq-let (unit _ bpm) mexp
+       (seq-let (unit _ bpm . mexp) mexp
          (k (lily-tempo-setter
              (* (lily-parse-dur (number->string unit))
                 bpm))
-            prev
-            (cdddr mexp))))
+            prev mexp)))
       ((\bpm)
        (k (lily-tempo-setter (car mexp))
           prev

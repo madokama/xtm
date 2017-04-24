@@ -65,16 +65,15 @@
                                         (cdr it)))
                                  (lily-parse-lattr (symbol->string note))))))
         (if stop
-            (lily-return-phrase
-             (lily-apply-cresc
-              (lily-parse-phrase prev
-                                 ;; Need to parse note (cmd) here to
-                                 ;; avoid infinite loop.
-                                 (cons (lily-parse-symbol prev cmd)
-                                       (reverse (cons note notes))))
-              stop)
-             (cdr mexp)
-             k)
+            (k (lily-apply-cresc (lily-parse-phrase
+                                  prev
+                                  ;; Need to parse note (cmd) here to
+                                  ;; avoid infinite loop.
+                                  (cons (lily-parse-symbol prev cmd)
+                                        (reverse (cons note notes))))
+                                 stop)
+               prev
+               (cdr mexp))
             (loop (cdr mexp) (cons note notes)))))))
 
 (set! lily-command-alist
