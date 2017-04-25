@@ -29,4 +29,4 @@
        (cdr mexp)
        (lambda (notes mexp)
          (k (lily-tuplet-apply-ratio ratio (lily-parse-phrase prev notes))
-            prev mexp))))))
+            mexp))))))

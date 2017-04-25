@@ -408,28 +408,27 @@
 ;;; User Interface
 
 (define lily-parse-music~
-  (letrec ((may-tie
-            (lambda (k)
-              (lambda (note prev mexp)
-                (lily-may-tie note mexp
-                              (lambda (note mexp)
-                                (k note
-                                   (parse (lily-last-note prev note) mexp)))))))
-           (parse
+  (letrec ((parse
             (lambda (prev mexp)
               (cond
                ((lily-music? mexp)
                 (lambda (k)
                   (k mexp (constantly '()))))
                ((pair? mexp)
-                (let ((note (lily-parse-mexp prev (car mexp))))
+                (let ((note (lily-parse-mexp prev (car mexp)))
+                      (may-tie
+                       (lambda (k)
+                         (lily-may-tie
+                          (lambda (note mexp)
+                            (k note
+                               (parse (lily-last-note prev note) mexp)))))))
                   (cond
                    ((procedure? note)
                     (lambda (k)
                       (note (cdr mexp) (may-tie k))))
                    (note
                     (lambda (k)
-                      ((may-tie k) note prev (cdr mexp)))))))
+                      ((may-tie k) note (cdr mexp)))))))
                (else (constantly '()))))))
     parse))
 

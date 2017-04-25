@@ -72,7 +72,6 @@
                                   (cons (lily-parse-symbol prev cmd)
                                         (reverse (cons note notes))))
                                  stop)
-               prev
                (cdr mexp))
             (loop (cdr mexp) (cons note notes)))))))
 

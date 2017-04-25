@@ -18,7 +18,7 @@
         (let ((chord (lily-copy prev)))
           (aif (lily-parse-dur (symbol->string cmd))
                (lily-duration! chord it))
-          (k chord chord mexp))
+          (k chord mexp))
         (lily-parse-brackets
          mexp '< '>
          (lambda (notes attr mexp)
@@ -28,7 +28,7 @@
              (lily-duration! chord
                              (or (lily-parse-dur attr)
                                  (lily-duration prev)))
-             (k (lily-apply-attr chord attr) prev mexp)))))))
+             (k (lily-apply-attr chord attr) mexp)))))))
 
 (set! lily-command-alist
       (cons (cons lily-parse-chord lily-chord-matcher) lily-command-alist))
