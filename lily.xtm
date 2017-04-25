@@ -480,12 +480,14 @@
   ;; Wrapper function for custom players.
   (lambda (play)
     (lambda (beat note)
-      (let ((arts (lily-articulations note)))
-        (play (*metro* beat)
-              (lily-note.pitch note)
-              (lily-arts-dyn (lily-volume note) arts)
-              (lily-arts-dur (*metro* 'dur (lily-duration note))
-                             arts))))))
+      (let ((dur (lily-duration note)))
+        ;; Not to play tied notes
+        (when (positive? dur)
+          (let ((arts (lily-articulations note)))
+            (play (*metro* beat)
+                  (lily-note.pitch note)
+                  (lily-arts-dyn (lily-volume note) arts)
+                  (lily-arts-dur (*metro* 'dur dur) arts))))))))
 
 (define lily-play-music
   (lambda (beat inst . voices)
