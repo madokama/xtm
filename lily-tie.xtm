@@ -9,9 +9,9 @@
 
 (define lily-tie?
   (lambda (note)
-    (cond ((lily-note? note) (lily-str-tie? (lily-note.raw note)))
+    (cond ((lily-note? note) (lily-str-tie? (lily-raw note)))
           ((lily-chord? note)
-           (or (lily-str-tie? (lily-chord.attr note))
+           (or (lily-str-tie? (lily-raw note))
                (cl:some lily-tie? (lily-notes note))))
           (else #f))))
 
@@ -19,10 +19,9 @@
   (lambda (note)
     (if (lily-chord? note)
         (begin
-          (when (lily-str-tie? (lily-chord.attr note))
+          (when (lily-str-tie? (lily-raw note))
             (for-each (lambda (note)
-                        (set!lily-note.raw note
-                                           (format "~a~~" (lily-note.raw note))))
+                        (lily-raw! note (format "~a~~" (lily-raw note))))
                       (lily-notes note)))
           note)
         (make-lily-chord 'notes (list note)

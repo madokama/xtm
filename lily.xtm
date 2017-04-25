@@ -121,7 +121,7 @@
   dur notes)
 
 (lily-deftype lily-chord
-  dur notes (attr ""))
+  dur notes (raw ""))
 
 (lily-deftype lily-cmd
   dur cmd)
@@ -165,6 +165,8 @@
 (define lily-articulations! (lily-generic 'arts!))
 (define lily-notes (lily-generic 'notes))
 (define lily-pn (lily-generic 'pn))
+(define lily-raw (lily-generic 'raw))
+(define lily-raw! (lily-generic 'raw!))
 
 ;; Some ad-hoc operators
 

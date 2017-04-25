@@ -14,21 +14,23 @@
 
 (define lily-parse-chord
   (lambda (cmd prev mexp k)
-    (if (lily-chord-repeat? cmd)
-        (let ((chord (lily-copy prev)))
-          (aif (lily-parse-dur (symbol->string cmd))
+    (let ((return
+           (lambda (chord mexp)
+             (awhen (lily-parse-dur (lily-raw chord))
                (lily-duration! chord it))
-          (k chord mexp))
-        (lily-parse-brackets
-         mexp '< '>
-         (lambda (notes attr mexp)
-           (let ((chord
-                  (make-lily-chord 'notes (lily-serialize-notes prev notes)
-                                   'attr attr)))
-             (lily-duration! chord
-                             (or (lily-parse-dur attr)
-                                 (lily-duration prev)))
-             (k (lily-apply-attr chord attr) mexp)))))))
+             (k (lily-apply-attr chord (lily-raw chord)) mexp))))
+      (if (lily-chord-repeat? cmd)
+          (let ((chord (lily-copy prev)))
+            (lily-raw! chord (symbol->string cmd))
+            (return chord mexp))
+          (lily-parse-brackets
+           mexp '< '>
+           (lambda (notes attr mexp)
+             (return
+              (make-lily-chord 'notes (lily-serialize-notes prev notes)
+                               'dur (lily-duration prev)
+                               'raw attr)
+              mexp)))))))
 
 (set! lily-command-alist
       (cons (cons lily-parse-chord lily-chord-matcher) lily-command-alist))
