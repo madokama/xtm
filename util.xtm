@@ -1,17 +1,68 @@
 
-(macro (aif form)
-  `(let ((it ,(cadr form)))
-     (if it
-         ,(caddr form)
-         ,(if (pair? (cdddr form))
-              (cadddr form)
-              #f))))
+(macro if-let
+  (lambda (form)
+    (apply (lambda (if-let bindings then else)
+             (let loop ((bindings (if (pair? (car bindings))
+                                      bindings
+                                      (list bindings)))
+                        (flag #f))
+               (if (null? bindings)
+                   (if flag then else)
+                   `(let ((,(caar bindings) ,(cadar bindings)))
+                      (if (and ,(caar bindings)
+                               (not (null? ,(caar bindings))))
+                          ,(loop (cdr bindings) #t)
+                          ,(loop '() #f))))))
+           form)))
+
+(macro (when-let form)
+  `(if-let ,(cadr form) (begin ,@(cddr form)) #f))
+
+(macro aif
+  (lambda (form)
+    (apply (lambda (aif test then . else)
+             `(if-let (it ,test)
+                ,then
+                ,(if (pair? else)
+                     (car else)
+                     #f)))
+           form)))
 
 (macro awhen
   (lambda (form)
     (apply (lambda (awhen test . body)
              `(aif ,test (begin ,@body) #f))
            form)))
+
+(macro seq-let
+  (lambda (form)
+    (define bind
+      (lambda (var n seq body)
+        (if (pair? var)
+            (if (null? (cdr var))
+                `(let ((,(car var) (cl:nthcdr ,n ,seq)))
+                   ,body)
+                `(seq-let ,var (nth ,n ,seq)
+                   ,body))
+            `(let ((,var (nth ,n ,seq)))
+               ,body))))
+    (apply (lambda (seq-let vars seq . body)
+             (let ((seq-var (gensym)))
+               `(let ((,seq-var ,seq))
+                  (and (pair? ,seq-var)
+                       ,(let loop ((count 0) (vars vars))
+                          (cond ((null? vars)
+                                 `(begin ,@body))
+                                ((symbol? vars)
+                                 (bind (list vars) count seq-var (loop () ())))
+                                (else
+                                 (bind (car vars)
+                                       count
+                                       seq-var
+                                       (loop (succ count) (cdr vars))))))))))
+           form)))
+
+;;;
 
 (define identity (lambda (x) x))
 
@@ -50,53 +101,6 @@
     ;; I miss nil = false semantics...
     (and (<= n (pred (length lst)))
          (list-ref lst n))))
-
-(macro seq-let
-  (lambda (form)
-    (define bind
-      (lambda (var n seq body)
-        (if (pair? var)
-            (if (null? (cdr var))
-                `(let ((,(car var) (cl:nthcdr ,n ,seq)))
-                   ,body)
-                `(seq-let ,var (nth ,n ,seq)
-                   ,body))
-            `(let ((,var (nth ,n ,seq)))
-               ,body))))
-    (apply (lambda (seq-let vars seq . body)
-             (let ((seq-var (gensym)))
-               `(let ((,seq-var ,seq))
-                  (and (pair? ,seq-var)
-                       ,(let loop ((count 0) (vars vars))
-                          (cond ((null? vars)
-                                 `(begin ,@body))
-                                ((symbol? vars)
-                                 (bind (list vars) count seq-var (loop () ())))
-                                (else
-                                 (bind (car vars)
-                                       count
-                                       seq-var
-                                       (loop (succ count) (cdr vars))))))))))
-           form)))
-
-(macro if-let
-  (lambda (form)
-    (apply (lambda (if-let bindings then else)
-             (let loop ((bindings (if (pair? (car bindings))
-                                      bindings
-                                      (list bindings)))
-                        (flag #f))
-               (if (null? bindings)
-                   (if flag then else)
-                   `(let ((,(caar bindings) ,(cadar bindings)))
-                      (if (and ,(caar bindings)
-                               (not (null? ,(caar bindings))))
-                          ,(loop (cdr bindings) #t)
-                          ,(loop '() #f))))))
-           form)))
-
-(macro (when-let form)
-  `(if-let ,(cadr form) (begin ,@(cddr form)) #f))
 
 (define string-empty?
   (lambda (str)
