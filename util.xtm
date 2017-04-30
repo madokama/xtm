@@ -38,14 +38,17 @@
   (lambda (form)
     (define bind
       (lambda (var n seq body)
-        (if (pair? var)
-            (if (null? (cdr var))
-                `(let ((,(car var) (cl:nthcdr ,n ,seq)))
-                   ,body)
-                `(seq-let ,var (nth ,n ,seq)
-                   ,body))
-            `(let ((,var (nth ,n ,seq)))
-               ,body))))
+        (cond ((pair? var)
+               (if (null? (cdr var))
+                   `(let ((,(car var) (cl:nthcdr ,n ,seq)))
+                      ,body)
+                   `(seq-let ,var (nth ,n ,seq)
+                      ,body)))
+              ((eq? var '_)
+               body)
+              (else
+               `(let ((,var (nth ,n ,seq)))
+                  ,body)))))
     (apply (lambda (seq-let vars seq . body)
              (let ((seq-var (gensym)))
                `(let ((,seq-var ,seq))
@@ -98,9 +101,10 @@
 
 (define nth
   (lambda (n lst)
-    ;; I miss nil = false semantics...
-    (and (<= n (pred (length lst)))
-         (list-ref lst n))))
+    (let loop ((n n) (lst lst))
+      (cond ((null? lst) #f)
+            ((= n 0) (car lst))
+            (else (loop (pred n) (cdr lst)))))))
 
 (define string-empty?
   (lambda (str)
