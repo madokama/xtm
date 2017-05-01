@@ -374,22 +374,22 @@
             (else (+ pitch 12))))))
 
 (define lily-rel-pitch
-  ;; Set the octave of NOTE relative to REF.
-  (lambda (ref note)
+  ;; Set the octave of NOTE relative to BASE.
+  (lambda (base note)
     (when (lily-note? note)
       (let ((pitch
-             (+ (lily-calc-pitch (lily-pn ref) note)
+             (+ (lily-calc-pitch (lily-pn base) note)
                 (* (lily-note.os note) 12))))
         (set!lily-note.pn note pitch)
         (set!lily-note.pitch note (+ pitch (lily-note.acc note)))))
-    (lily-supplement ref note)))
+    note))
 
 (define lily-supplement
-  (lambda (ref note)
+  (lambda (base note)
     (unless (lily-duration note)
-      (lily-duration! note (lily-duration ref)))
+      (lily-duration! note (lily-duration base)))
     (unless (lily-volume note)
-      (lily-volume! note (lily-volume ref)))
+      (lily-volume! note (lily-volume base)))
     note))
 
 (define lily-last-note
