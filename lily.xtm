@@ -64,7 +64,7 @@
             (lily-parse-sattr str))))
 
 (define lily-apply-attr
-  (lambda (note str)
+  (lambda (note)
     (foldl (lambda (note attr)
              (or (cl:some (lambda (handle)
                             (handle note attr))
@@ -74,7 +74,7 @@
                    (lily-articulations! note (cons attr (lily-articulations note)))
                    note)))
            note
-           (lily-parse-attr str))))
+           (lily-parse-attr (lily-raw note)))))
 
 
 
@@ -115,7 +115,7 @@
   raw)
 
 (lily-deftype lily-rest
-  dur)
+  dur raw)
 
 (lily-deftype lily-phrase
   dur notes)
@@ -267,6 +267,12 @@
                       'dur (if dur (lily-parse-dur dur) #f)
                       'raw str))))
 
+(define lily-parse-rest
+  (lambda (str)
+    (seq-let (_ dur) (regex:matched str lily-regex-rest)
+      (make-lily-rest 'dur (and dur (lily-parse-dur dur))
+                      'raw str))))
+
 (define lily-serialize-music
   (lambda (music)
     (letrec ((accum
@@ -342,17 +348,13 @@
                 mexp)
             0 '()))))
 
-(define lily-parse-rest
-  (lambda (str)
-    (seq-let (_ dur) (regex:matched str lily-regex-rest)
-      (make-lily-rest 'dur (and dur (lily-parse-dur dur))))))
-
 (define lily-parse-symbol
   (lambda (prev mexp)
     (let ((str (symbol->string mexp)))
-      (aif (or (lily-parse-note str)
-               (lily-parse-rest str))
-           (lily-rel-pitch prev (lily-apply-attr it str))))))
+      (when-let (note (or (lily-parse-note str)
+                          (lily-parse-rest str)))
+        (lily-apply-attr
+         (lily-supplement prev (lily-rel-pitch prev note)))))))
 
 (define lily-parse-mexp
   (lambda (prev mexp)

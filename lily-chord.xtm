@@ -18,7 +18,7 @@
            (lambda (chord mexp)
              (awhen (lily-parse-dur (lily-raw chord))
                (lily-duration! chord it))
-             (k (lily-apply-attr chord (lily-raw chord)) mexp))))
+             (k (lily-apply-attr chord) mexp))))
       (if (lily-chord-repeat? cmd)
           (let ((chord (lily-copy prev)))
             (lily-raw! chord (symbol->string cmd))
