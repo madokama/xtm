@@ -16,8 +16,7 @@
 (define lily-apply-dyn
   (lambda (note dyn)
     (awhen (assq dyn lily-map-dyn)
-      (lily-volume! note (cdr it))
-      note)))
+      (lily-volume note (cdr it)))))
 
 (set! lily-attr-handlers (cons lily-apply-dyn lily-attr-handlers))
 
@@ -50,7 +49,7 @@
                 (loop ;; Reduce jump in dynamics.
                       (- time (lily-duration (car (lily-notes note))))
                       (lily-notes note))
-                (lily-volume! note (+ y (* slope time))))
+                (lily-volume note (+ y (* slope time))))
             (loop (+ time (lily-duration note))
                   (cdr notes))))))
     phrase))

@@ -71,7 +71,7 @@
                           lily-attr-handlers)
                  (begin
                    ;; Defer processing till play phase.
-                   (lily-articulations! note (cons attr (lily-articulations note)))
+                   (lily-articulations note (cons attr (lily-articulations note)))
                    note)))
            note
            (lily-parse-attr (lily-raw note)))))
@@ -152,28 +152,28 @@
 ;; Data-directed strategy as described in (info "(sicp) 2-4-3")
 (define lily-generic
   (lambda (op)
-    (lambda (ly . args)
-      (let ((proc (get op (lily-typetag ly))))
-        (and (not (null? proc))
-             (apply (eval proc) ly args))))))
+    (let ((set (string->symbol (format "~s!" op))))
+      (lambda (ly . args)
+        (if (pair? args)
+            (when-let (proc (get set (lily-typetag ly)))
+              ((eval proc) ly (car args))
+              ly)
+            (when-let (proc (get op (lily-typetag ly)))
+              ((eval proc) ly)))))))
 
 (define lily-duration (lily-generic 'dur))
-(define lily-duration! (lily-generic 'dur!))
 (define lily-volume (lily-generic 'vol))
-(define lily-volume! (lily-generic 'vol!))
 (define lily-articulations (lily-generic 'arts))
-(define lily-articulations! (lily-generic 'arts!))
 (define lily-notes (lily-generic 'notes))
 (define lily-pn (lily-generic 'pn))
 (define lily-raw (lily-generic 'raw))
-(define lily-raw! (lily-generic 'raw!))
 
 ;; Some ad-hoc operators
 
 (put 'dur! 'lily-chord
      (lambda (chord dur)
        (for-each (lambda (note)
-                   (lily-duration! note dur))
+                   (lily-duration note dur))
                  (lily-notes chord))
        (set!lily-chord.dur chord dur)))
 
@@ -184,7 +184,7 @@
 (put 'vol! 'lily-chord
      (lambda (chord vol)
        (for-each (lambda (note)
-                   (lily-volume! note vol))
+                   (lily-volume note vol))
                  (lily-notes chord))))
 
 (put 'arts 'lily-chord
@@ -194,7 +194,7 @@
 (put 'arts! 'lily-chord
      (lambda (chord arts)
        (for-each (lambda (note)
-                   (lily-articulations! note arts))
+                   (lily-articulations note arts))
                  (lily-notes chord))))
 
 (put 'pn 'lily-chord
@@ -354,7 +354,8 @@
       (when-let (note (or (lily-parse-note str)
                           (lily-parse-rest str)))
         (lily-apply-attr
-         (lily-supplement prev (lily-rel-pitch prev note)))))))
+         (lily-supplement prev (lily-rel-pitch prev note)
+                          lily-duration lily-volume))))))
 
 (define lily-parse-mexp
   (lambda (prev mexp)
@@ -385,15 +386,16 @@
     note))
 
 (define lily-supplement
-  (lambda (base note)
-    (unless (lily-duration note)
-      (lily-duration! note (lily-duration base)))
-    (unless (lily-volume note)
-      (lily-volume! note (lily-volume base)))
-    note))
+  (lambda (base note . keys)
+    (foldl (lambda (note key)
+             (unless (key note)
+               (key note (key base)))
+             note)
+           note keys)))
 
 (define lily-last-note
-  ;; Choose notes rightward
+  ;; Compute the last pitch & dur to achieve Lilypond-style relative
+  ;; pitch notation.
   (lambda (l r)
     (cond ((or (lily-note? r) (lily-chord? r))
            r)
@@ -402,9 +404,8 @@
           ((lily-phrase? l)
            (cl:reduce lily-last-note (lily-notes l)))
           ((lily-rest? r)
-           (let ((l~ (lily-copy l)))
-             (lily-duration! l~ (lily-duration r))
-             l~))
+           ;; Inherit duration from rest to the copy of (assumed) note `l'.
+           (lily-duration (lily-copy l) (lily-duration r)))
           (else l))))
 
 

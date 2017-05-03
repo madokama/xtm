@@ -17,12 +17,11 @@
     (let ((return
            (lambda (chord mexp)
              (awhen (lily-parse-dur (lily-raw chord))
-               (lily-duration! chord it))
+               (lily-duration chord it))
              (k (lily-apply-attr chord) mexp))))
       (if (lily-chord-repeat? cmd)
-          (let ((chord (lily-copy prev)))
-            (lily-raw! chord (symbol->string cmd))
-            (return chord mexp))
+          (return (lily-raw (lily-copy prev) (symbol->string cmd))
+                  mexp)
           (lily-parse-brackets
            mexp '< '>
            (lambda (notes attr mexp)

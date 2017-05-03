@@ -21,7 +21,7 @@
         (begin
           (when (lily-str-tie? (lily-raw note))
             (for-each (lambda (note)
-                        (lily-raw! note (format "~a~~" (lily-raw note))))
+                        (lily-raw note (format "~a~~" (lily-raw note))))
                       (lily-notes note)))
           note)
         (make-lily-chord 'notes (list note)
@@ -34,8 +34,8 @@
         (when (pair? tail)
           (when-let (match (cl:find-if (compose (partial = pitch) lily-note.pitch)
                                        (lily-notes (car tail))))
-            (lily-duration! head (+ (lily-duration head) (lily-duration match)))
-            (lily-duration! match 0)
+            (lily-duration head (+ (lily-duration head) (lily-duration match)))
+            (lily-duration match 0)
             (when (lily-tie? match)
               (loop (cdr tail)))))))))
 

@@ -9,9 +9,9 @@
     (for-each (lambda (note)
                 (if (lily-phrase? note)
                     (lily-tuplet-apply-ratio ratio note)
-                    (lily-duration! note (* (lily-duration note) ratio))))
+                    (lily-duration note (* (lily-duration note) ratio))))
               (lily-notes tuplet))
-    (lily-duration! tuplet (* (lily-duration tuplet) ratio))
+    (lily-duration tuplet (* (lily-duration tuplet) ratio))
     tuplet))
 
 (define lily-tuplet-parse-phrase
