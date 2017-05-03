@@ -21,8 +21,8 @@
   (lambda (alist)
     (lambda (val arts)
       (or (cl:some (lambda (art)
-                     (aif (assq art alist)
-                          ((cdr it) val)))
+                     (awhen (assq art alist)
+                       ((cdr it) val)))
                    arts)
           val))))
 

@@ -54,8 +54,8 @@
 (define lily-parse-sattr
   (lambda (str)
     (map (lambda (sh)
-           (aif (assoc sh lily-arts-shorthand)
-                (cdr it)))
+           (awhen (assoc sh lily-arts-shorthand)
+             (cdr it)))
          (regex:match-all str lily-regex-sattr))))
 
 (define lily-parse-attr
@@ -132,8 +132,8 @@
 
 (define lily-music?
   (lambda (ly)
-    (aif (lily-typetag ly)
-         (memq it lily-music-types))))
+    (awhen (lily-typetag ly)
+      (memq it lily-music-types))))
 
 (define lily-copy
   (lambda (ly)

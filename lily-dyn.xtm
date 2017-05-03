@@ -61,8 +61,8 @@
       (let* ((note (car mexp))
              (stop (and (symbol? note)
                         (cl:some (lambda (attr)
-                                   (aif (assq attr lily-map-dyn)
-                                        (cdr it)))
+                                   (awhen (assq attr lily-map-dyn)
+                                     (cdr it)))
                                  (lily-parse-lattr (symbol->string note))))))
         (if stop
             (k (lily-apply-cresc (lily-parse-phrase
