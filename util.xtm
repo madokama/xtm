@@ -8,7 +8,7 @@
                         (flag #f))
                (if (null? bindings)
                    (if flag then else)
-                   `(let ((,(caar bindings) ,(cadar bindings)))
+                   `(let (,(car bindings))
                       (if (and ,(caar bindings)
                                (not (null? ,(caar bindings))))
                           ,(loop (cdr bindings) #t)
@@ -36,33 +36,31 @@
 
 (macro seq-let
   (lambda (form)
-    (define bind
-      (lambda (var n seq body)
-        (cond ((pair? var)
-               (if (null? (cdr var))
-                   `(let ((,(car var) (cl:nthcdr ,n ,seq)))
-                      ,body)
-                   `(seq-let ,var (nth ,n ,seq)
-                      ,body)))
-              ((eq? var '_)
-               body)
-              (else
-               `(let ((,var (nth ,n ,seq)))
-                  ,body)))))
     (apply (lambda (seq-let vars seq . body)
-             (let ((seq-var (gensym)))
-               `(let ((,seq-var ,seq))
-                  (and (pair? ,seq-var)
-                       ,(let loop ((count 0) (vars vars))
-                          (cond ((null? vars)
-                                 `(begin ,@body))
-                                ((symbol? vars)
-                                 (bind (list vars) count seq-var (loop () ())))
-                                (else
-                                 (bind (car vars)
-                                       count
-                                       seq-var
-                                       (loop (succ count) (cdr vars))))))))))
+             (letrec ((seq-var (gensym))
+                      (collect
+                       (lambda (tr acc)
+                         (cond ((null? tr) acc)
+                               ((symbol? tr) (cons tr acc))
+                               ((pair? tr)
+                                (collect (car tr)
+                                         (collect (cdr tr) acc)))))))
+               `(let (,@(map (lambda (v)
+                              (list v #f))
+                            (collect vars '()))
+                      (,seq-var ,seq))
+                  (if (pair? ,seq-var)
+                      (begin
+                        ,(let loop ((vars vars))
+                           (cond ((symbol? vars)
+                                  `(set! ,vars ,seq-var))
+                                 ((pair? vars)
+                                  `(when (pair? ,seq-var)
+                                     (set! ,(car vars) (car ,seq-var))
+                                     (set! ,seq-var (cdr ,seq-var))
+                                     ,(loop (cdr vars))))))
+                        ,@body)
+                      #f))))
            form)))
 
 ;;;
